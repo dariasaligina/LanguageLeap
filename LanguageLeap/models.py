@@ -1,0 +1,81 @@
+from django.db import models
+from django.contrib.auth.models import User
+
+
+class Language(models.Model):
+    name = models.CharField(max_length=128)
+    code = models.CharField(max_length=32)
+    image = models.ImageField(upload_to="languages/")
+    voice_name = models.CharField(max_length=128)
+
+    def __str__(self):
+        return self.name
+
+
+class LanguageLevel(models.Model):
+    name = models.CharField(max_length=32)
+
+    def __str__(self):
+        return self.name
+
+
+
+
+
+class Text(models.Model):
+    name = models.CharField(max_length=256)
+    language = models.ForeignKey(Language, on_delete=models.PROTECT)
+    language_level = models.ForeignKey(LanguageLevel, blank=True, on_delete=models.PROTECT)
+    text = models.TextField()
+    audio = models.FileField(upload_to="textAudio/", blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    public = models.BooleanField(default=False)
+    image = models.ImageField(upload_to="textImage/", blank = True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+    modification_date = models.DateTimeField(auto_now=True)
+
+    @property
+    def save_count(self):
+        return self.savedtexts_set.count()
+
+    def __str__(self):
+        return self.name
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(max_length=500, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    language = models.ForeignKey(Language, on_delete=models.PROTECT)
+    creation_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.user.username
+
+
+class Word(models.Model):
+    word = models.CharField(max_length=128)
+    language = models.ForeignKey(Language, on_delete=models.PROTECT)
+    audio = models.FileField(upload_to="wordAudio/", blank=True)
+    response = models.JSONField()
+
+    def __str__(self):
+        return self.word
+
+
+class SavedWords(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    word = models.ForeignKey(Word, on_delete=models.PROTECT)
+    knowledge_degree = models.IntegerField()
+    next_rep = models.DateTimeField()
+
+    def __str__(self):
+        return self.word
+
+class SavedTexts(models.Model):
+    user = models.ForeignKey(User, on_delete= models.CASCADE)
+    text = models.ForeignKey(Text, on_delete= models.CASCADE)
+    save_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.text.name
