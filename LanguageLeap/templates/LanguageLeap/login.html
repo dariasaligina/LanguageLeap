@@ -97,6 +97,9 @@
         .language-option i {
             margin-right: 10px;
         }
+        .error-message{
+        color:red;
+        }
     </style>
 </head>
 <body>
@@ -104,6 +107,9 @@
         <h2>Вход</h2>
         <form method = "post">
 {%csrf_token%}
+            {%for error in errors%}
+            <p class="error-message">{{error}}</p>
+            {%endfor%}
             <div class="form-group">
                 <label for="username">Имя пользователя</label>
                 <input type="text" id="username" name="username" placeholder="Enter your username" required>

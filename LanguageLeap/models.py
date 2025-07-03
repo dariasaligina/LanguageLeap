@@ -36,7 +36,7 @@ class Text(models.Model):
 
     @property
     def save_count(self):
-        return self.savedtexts_set.count()
+        return self.savedtext_set.count()
 
     def __str__(self):
         return self.name
@@ -68,6 +68,7 @@ class SavedWord(models.Model):
     word = models.ForeignKey(Word, on_delete=models.PROTECT)
     knowledge_degree = models.IntegerField()
     next_rep = models.DateTimeField()
+    response = models.JSONField(blank=True)
 
     def __str__(self):
         return self.word

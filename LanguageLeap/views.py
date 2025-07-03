@@ -1,11 +1,13 @@
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from django.contrib.postgres.search import SearchVector
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.contrib.auth import authenticate, login, logout
-from .models import Text, LanguageLevel, Language
+from .models import Text, LanguageLevel, Language, Profile
 from django.views.decorators.csrf import csrf_protect
+from .forms import RegistrationForm
 
 
 # Create your views here.
@@ -35,18 +37,34 @@ def catalog(request):
 @csrf_protect
 def user_registration(request):
     languages = Language.objects.all()
+    form = RegistrationForm()
+
+    if (request.method == "POST"):
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data["username"]
+            email = form.cleaned_data["email"]
+            password = form.cleaned_data["password"]
+            language = request.POST["language"]
+            user = User.objects.create_user(username, email,password)
+            user.save()
+            profile = Profile(language_id = language, user=user)
+            profile.save()
+            login(request, user)
+            return redirect("leap:catalog")
 
 
-    if (request.POST):
-        pass
+
 
     return render(request, "LanguageLeap/registration.html", {
-        "languages":languages,
+        "languages": languages,
+        "form": form,
     })
 
 
 @csrf_protect
 def user_login(request):
+    errors = []
     if request.POST:
         username = request.POST["username"]
         password = request.POST["password"]
@@ -54,7 +72,9 @@ def user_login(request):
         if user is not None:
             login(request, user)
             return redirect("leap:catalog")
-    return render(request, "LanguageLeap/login.html")
+        else:
+            errors.append("Неправильное имя или пароль")
+    return render(request, "LanguageLeap/login.html", {"errors":errors})
 
 
 
