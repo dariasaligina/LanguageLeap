@@ -1,13 +1,21 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.contrib.postgres.search import SearchVector
-from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.contrib.auth import authenticate, login, logout
-from .models import Text, LanguageLevel, Language, Profile
+
+from mysite import settings
+from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord
 from django.views.decorators.csrf import csrf_protect
-from .forms import RegistrationForm
+from .forms import RegistrationForm, TextForm
+from gtts import gTTS
+from datetime import datetime
+import os
+from PyMultiDictionary import MultiDictionary
 
 
 # Create your views here.
@@ -83,3 +91,89 @@ def user_logout(request):
     logout(request)
     return redirect("leap:login")
 
+@login_required
+def text(request, text_id):
+    text = get_object_or_404(Text, pk=text_id)
+    return render(request, "LanguageLeap/text.html",{"text":text})
+
+
+@csrf_protect
+@login_required
+def upload_text(request):
+    form = TextForm()
+    if request.method == "POST":
+        form = TextForm(request.POST)
+        if (form.is_valid()):
+            new_text = Text()
+            new_text.user = request.user
+            new_text.name = form.cleaned_data["name"]
+            new_text.text = form.cleaned_data["text"]
+            new_text.language = form.cleaned_data["language"]
+            new_text.language_level = form.cleaned_data["language_level"]
+            new_text.public = form.cleaned_data["public"]
+            if (form.cleaned_data["image"]):
+                new_text.image = form.cleaned_data["image"]
+            else:
+                new_text.image.name = "textImage/book.jpg"
+            if (form.cleaned_data["audio"]):
+                new_text.audio = form.cleaned_data["audio"]
+            else:
+                new_text.save()
+                audio_dir = os.path.join(settings.MEDIA_ROOT, 'textAudio')
+                os.makedirs(audio_dir, exist_ok=True)  # Создаем директорию, если ее нет
+                audio_filename = f"{new_text.id}.mp3"
+                audio_path = os.path.join(audio_dir, audio_filename)
+                audio = gTTS(text=form.cleaned_data["text"], lang=new_text.language.code)
+                audio.save(audio_path)
+                # Устанавливаем путь к аудиофайлу относительно MEDIA_ROOT
+                new_text.audio.name = os.path.join('textAudio', audio_filename)
+            new_text.save()
+            return redirect("leap:text", text_id = new_text.pk)
+    return render(request, "LanguageLeap/upload_text.html", {"form":form})
+
+
+
+
+
+
+@login_required
+def translate_word(request, language_code, word):
+    language_object = get_object_or_404(Language, code = language_code)
+    try:
+        word_object = Word.objects.get(word=word, language = language_object)
+    except:
+        word_object = Word()
+        word_object.word = word
+        word_object.language = language_object
+
+        audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
+        os.makedirs(audio_dir, exist_ok=True)
+        audio_filename = f"{word}-{language_code}.mp3"
+        audio_path = os.path.join(audio_dir, audio_filename)
+        audio = gTTS(text=word, lang=language_code)
+        audio.save(audio_path)
+        word_object.audio.name = os.path.join('wordAudio', audio_filename)
+
+        dictionary = MultiDictionary()
+
+
+        translation = dictionary.translate(language_code, word)[19]
+        meanings = dictionary.meaning(language_code, word)[1]
+
+        word_object.response = {"translation":translation, "meaning": meanings}
+        word_object.save()
+    try:
+        saved_word = SavedWord.objects.get(word = word_object,user=request.user)
+    except:
+        saved_word = SavedWord()
+        saved_word.word = word_object
+        saved_word.user = request.user
+    saved_word.knowledge_degree = 0
+    saved_word.next_rep = datetime.now()
+    saved_word.save()
+    word_data = {
+        "word": word,
+        "response": word_object.response
+    }
+
+    return JsonResponse({"word": word_data})

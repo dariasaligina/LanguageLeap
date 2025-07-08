@@ -1,0 +1,323 @@
+{%load filters%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Text Display</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #f5f5f5;
+            --secondary-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --accent-color: #007bff;
+            --hover-color: #0056b3;
+            --radius: 8px;
+            --padding-base: 20px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: var(--padding-base);
+            gap: var(--padding-base);
+        }
+
+        .header {
+            background-color: var(--secondary-bg);
+            padding: var(--padding-base);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 8px var(--shadow-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            color: var(--text-color);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: var(--padding-base);
+        }
+
+        .text-area {
+            background-color: var(--secondary-bg);
+            padding: var(--padding-base);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 8px var(--shadow-color);
+            flex: 2;
+        }
+
+        .text-area h2 {
+            font-size: 1.5em;
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        .text-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .text-content p {
+            margin-bottom: 1em;
+        }
+
+        .save-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+
+            padding-top: 5px;
+        }
+
+        .save-options button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .save-options button:hover {
+            background-color: var(--hover-color);
+        }
+
+        .save-options button.active {
+            background-color: #28a745; /* Green for active state */
+        }
+
+        .sidebar {
+            background-color: var(--secondary-bg);
+            padding: var(--padding-base);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 8px var(--shadow-color);
+            flex: 1;
+        }
+
+        .sidebar h3 {
+            font-size: 1.3em;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .vocabulary-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .vocabulary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 0;
+        }
+
+        .vocabulary-item:last-child {
+            border-bottom: none;
+        }
+
+        .vocabulary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .vocabulary-header span {
+            display: flex;
+            gap: 5px;
+        }
+
+        .vocabulary-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .vocabulary-item.expanded .vocabulary-toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        .vocabulary-details {
+            display: none;
+            margin-top: 10px;
+            padding-left: 15px;
+            border-left: 3px solid var(--accent-color);
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .vocabulary-item.expanded .vocabulary-details {
+            display: block;
+        }
+
+        .vocabulary-details p {
+            margin: 5px 0;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                flex-direction: row;
+            }
+        }
+        .word-you{
+        background: rgba(255,255,0,0.12);
+        text-decoration: underline;
+        }
+
+        audio {
+    width: 100%;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div>
+            <h1>{{text.name}}</h1>
+
+            <div class="text-meta">
+                    <p>Уровень: {{text.language_level}} </p>
+            </div>
+                <div class="save-options">
+                    <button id="readBtn"><i class="fas fa-check-circle"></i> Читать</button>
+                    <button id="readLaterBtn"><i class="fas fa-bookmark"></i> Читать позже</button>
+                    <button id="completedBtn"><i class="fas fa-trophy"></i> Прочитано</button>
+                </div>
+            </div>
+            <div class="user-info">
+                <span><i class="fas fa-user"></i> Опубликовано: {{text.user.username}}</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+
+            <section class="text-area">
+                <audio src = "{{text.audio.url}}" controls></audio>
+
+                <div class="text-content">
+
+
+                    {% for paragraph in text.split_text %}
+
+    <p>
+
+        {% for word in paragraph %}
+
+            <span class="word-{{ word |lower|strip_punctuation}}">{{ word }}</span>
+
+        {% endfor %}
+
+    </p>
+
+{% endfor %}
+
+
+                </div>
+
+
+            </section>
+
+            <aside class="sidebar">
+                <h3>Лексика</h3>
+                <ul class="vocabulary-list">
+                    <li class="vocabulary-item">
+                        <div class="vocabulary-header">
+                            <span>Magnificent - Великолепный</span>
+                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
+                        </div>
+                        <div class="vocabulary-details">
+                            <p><strong>Definition:</strong> Impressively beautiful, elaborate, or extravagant; striking.</p>
+                            <p><strong>Synonyms:</strong> Splendid, grand, imposing, superb</p>
+                            <p><strong>Antonyms:</strong> Ordinary, humble, modest</p>
+                        </div>
+                    </li>
+                    <li class="vocabulary-item">
+                        <div class="vocabulary-header">
+                            <span>Primeval - Первобытный</span>
+                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
+                        </div>
+                        <div class="vocabulary-details">
+                            <p><strong>Definition:</strong> Of or resembling the earliest ages in the history of the world.</p>
+                            <p><strong>Synonyms:</strong> Ancient, prehistoric, earliest, primitive</p>
+                            <p><strong>Antonyms:</strong> Modern, recent, new</p>
+                        </div>
+                    </li>
+                    <li class="vocabulary-item">
+                        <div class="vocabulary-header">
+                            <span>Constrictor - Удав</span>
+                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
+                        </div>
+                        <div class="vocabulary-details">
+                            <p><strong>Definition:</strong> A snake that kills its prey by squeezing it.</p>
+                            <p><strong>Synonyms:</strong> Boa, python</p>
+                            <p><strong>Antonyms:</strong> N/A</p>
+                        </div>
+                    </li>
+                    <li class="vocabulary-item">
+                        <div class="vocabulary-header">
+                            <span>Pondered - Размышлял</span>
+                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
+                        </div>
+                        <div class="vocabulary-details">
+                            <p><strong>Definition:</strong> Think about (something) carefully, especially before making a decision or reaching a conclusion.</p>
+                            <p><strong>Synonyms:</strong> Consider, reflect, muse, contemplate</p>
+                            <p><strong>Antonyms:</strong> Ignore, forget, disregard</p>
+                        </div>
+                    </li>
+                </ul>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Save options functionality
+            const saveButtons = document.querySelectorAll('.save-options button');
+            saveButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    saveButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    console.log(`Text marked as: ${button.textContent.trim()}`);
+                });
+            });
+
+            // Vocabulary toggle functionality
+            const vocabularyHeaders = document.querySelectorAll('.vocabulary-header');
+            vocabularyHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const item = header.closest('.vocabulary-item');
+                    item.classList.toggle('expanded');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

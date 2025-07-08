@@ -167,6 +167,9 @@
             min-width: unset;
         }
     }
+    a{
+    text-decoration: none;
+    }
     </style>
 </head>
 <body>
@@ -199,15 +202,17 @@
                     {%endfor%}
                 </select>
             </div>
-            <input type="submit"></input>
+            <input type="submit" ></input>
             </form>
         </div>
 
         <div class="text-display-section" id="textDisplaySection">
             <!-- Тексты будут динамически загружаться сюда -->
             {% for text in texts %}
+            <a href = "{%url "leap:text" text.id%}">
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
+
                     <div class="text-content">
                         <h3>{{text.name}}</h3>
                         <div class="text-details">
@@ -216,7 +221,7 @@
                                 <i class="fas fa-heart"></i> {{text.save_count}}
                             </span>
                         </div>
-                    </div></div>
+                    </div></div></a>
                     {%endfor%}
 
         </div>

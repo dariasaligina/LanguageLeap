@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.forms import ModelForm
+from .models import Text
 
 
 class RegistrationForm(forms.Form):
@@ -29,4 +31,10 @@ class RegistrationForm(forms.Form):
                 raise forms.ValidationError("Пароли должны совпадать")
 
         return cleaned_data
+
+
+class TextForm(ModelForm):
+    class Meta:
+        model = Text
+        fields = ["name", "text", "language", "language_level", "public", "image", "audio"]
 
