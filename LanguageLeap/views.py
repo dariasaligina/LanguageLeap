@@ -20,6 +20,8 @@ import os
 from PyMultiDictionary import MultiDictionary
 from translate import Translator
 from nltk.stem import WordNetLemmatizer
+from django.utils import timezone
+from datetime import timedelta
 
 
 # Create your views here.
@@ -202,15 +204,17 @@ def learn_page(request):
 
 
 def saved_word_update(request, id, is_correct):
+    print("saved_word_update", id, is_correct)
     saved_word = get_object_or_404(SavedWord, id=id)
     if is_correct:
         if saved_word.knowledge_degree_id == 6:
             saved_word.delete()
             return JsonResponse({"saved_word": "deleted"})
         else:
-            saved_word.knowledge_degree_id+=1
+            saved_word.knowledge_degree_id += 1
+            saved_word.next_rep = timezone.now() + saved_word.knowledge_degree.duration
     else:
-        saved_word.knowledge_degree_id = (saved_word.knowledge_degree_id+1)/2
-    saved_word.next_rep = datetime.now() + saved_word.knowledge_degree.duration
+        saved_word.knowledge_degree_id = (saved_word.knowledge_degree_id+1)//2
+        saved_word.next_rep = timezone.now()
     saved_word.save()
-    return JsonResponse({"saved_word": saved_word})
+    return JsonResponse({"saved_word": "updated"})

@@ -13,5 +13,4 @@ urlpatterns = [
     path("translate_word/<slug:language_code>/<slug:word>", views.translate_word, name="translate_word"),
     path("learn/", views.learn_page, name = 'learn'),
     path("saved_word_update/<int:id>/<int:is_correct>",views.saved_word_update,name="saved_word_update")
-
 ]

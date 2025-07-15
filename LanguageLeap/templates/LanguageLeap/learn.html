@@ -217,345 +217,359 @@
     </div>
 
     <script>
-          function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-          // Generate a random index 'j' from 0 to 'i' (inclusive)
-          const j = Math.floor(Math.random() * (i + 1));
-
-          // Swap elements at indices 'i' and 'j'
-          // This effectively moves the current element 'i' to a random position
-          // among the unshuffled elements, and brings an unshuffled element
-          // to position 'i' to be processed in the next iteration.
-          [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-      }
-
-      function getWordOptions(word){
-      opt = shuffleArray(all_words);
-      ans = [word, opt[0].word, opt[1].word, opt[2].word];
-      for (i = 1; i < 4; i++){
-      if (ans[i] == word){
-      ans[i] = opt[4].word
-      }}
-      return shuffleArray(ans)
-      }
-
-
-
-      function getTranslationOptions(translation){
-      opt = shuffleArray(all_words);
-      ans = [translation, opt[0].translation, opt[1].translation, opt[2].translation];
-      for (i = 1; i < 4; i++){
-      if (ans[i] == translation){
-      ans[i] = opt[4].translation
-      }
-      }
-      return shuffleArray(ans)
-      }
-
-
-
-
-
-              const quizContent = document.getElementById('quiz-content');
-              const nextQuestionBtn = document.getElementById('nextQuestionBtn');
-
-
-              all_words = [
-              {%for word in all_words%}
-              {
-              word:"{{word.word.word}}",
-              translation:"{{word.word.response.translation}}",
-              },
-              {%endfor%}
-              ]
-
-              questions = [
-              {%for word in words%}
-
-                  {%if word.knowledge_degree_id == 1 %}
-
-                      {
-                        id:"{{word.id}}",
-                      type: 'audio-listen',
-                      question: 'Послушайте слово и выберите его.',
-                      audio: '{{word.word.audio.url}}',
-                      options: getWordOptions("{{word.word.word}}"),
-                      correctAnswer: '{{word.word.word}}',
-
-                      translation: '{{word.word.response.translation}}'
-                      },
-                  {%endif%}
-                  {%if word.knowledge_degree_id == 2 %}
-
-                      {id:"{{word.id}}",
-                          type: 'multiple-choice',
-                          word: '{{word.word.word}}',
-                          question: 'Как переводится слово: "{{word.word.word}}"?',
-                          options: getTranslationOptions('{{word.word.response.translation}}'),
-                          correctAnswer: '{{word.word.response.translation}}',
-                          meaning: '-',
-                          translation: '{{word.word.response.translation}}',
-                          audio: null
-                      },
-                  {%endif%}
-                  {%if word.knowledge_degree_id == 3 %}
-
-                      {
-                        id:"{{word.id}}",
-                      type: 'audio-listen',
-                      question: 'Послушайте слово и выберите его перевод.',
-                      audio: '{{word.word.audio.url}}',
-                      options: getTranslationOptions('{{word.word.response.translation}}'),
-                      correctAnswer: '{{word.word.response.translation}}',
-
-                      translation: '{{word.word.word}}'
-                      },
-                  {%endif%}
-                  {%if word.knowledge_degree_id == 4 %}
-
-                      {
-                        id:"{{word.id}}",
-                          type: 'multiple-choice',
-                          word: '{{word.word.response.translation}}',
-                          question: 'Как переводится слово: "{{word.word.response.translation}}"?',
-                          options: getWordOptions('{{word.word.word}}'),
-                          correctAnswer: '{{word.word.word}}',
-                          meaning: '-',
-                          translation: '{{word.word.word}}',
-                          audio: null
-                      },
-                  {%endif%}
-                  {%if word.knowledge_degree_id == 5 %}
-
-                      {
-                        id:"{{word.id}}",
-                      type: 'flashcard',
-                      word: '{{word.word.word}}',
-                      question: 'Вспомните перевод слова "{{word.word.word}}".',
-                      answer: '{{word.word.response.translation}}',
-                      meaning: '{{word.word.response.meaning}}',
-                      translation: '{{word.word.response.translation}}',
-                      audio: null
-                  },
-                  {%endif%}
-                  {%if word.knowledge_degree_id == 6 %}
-
-                      {
-                        id:"{{word.id}}",
-                      type: 'flashcard',
-                      word: '{{word.word.response.translation}}',
-                      question: 'Вспомните перевод слова "{{word.word.response.translation}}".',
-                      answer: '{{word.word.word}}',
-                      meaning: '{{word.word.response.meaning}}',
-                      translation: '{{word.word.word}}',
-                      audio: null
-                  },
-                  {%endif%}
-
-              {%endfor%}
-
-              ];
-
-              let currentQuestionIndex = 0;
-
-              function loadQuestion() {
-                  if (currentQuestionIndex >= questions.length) {
-                      quizContent.innerHTML = '<h2>Поздравляем! Вы прошли все вопросы!</h2>';
-                      nextQuestionBtn.style.display = 'none';
-                      return;
-                  }
-
-                  const qData = questions[currentQuestionIndex];
-                  quizContent.innerHTML = ''; // Очищаем предыдущий вопрос
-
-                  const questionContainer = document.createElement('div');
-                  questionContainer.classList.add('question-container');
-
-                  const questionText = document.createElement('div');
-                  questionText.classList.add('question-text');
-                  questionText.textContent = qData.question;
-                  questionContainer.appendChild(questionText);
-
-                  // Добавляем аудио, если оно есть
-                  if (qData.audio) {
-                      const audioPlayer = document.createElement('audio');
-                      audioPlayer.controls = true;
-                      audioPlayer.src = qData.audio;
-                      questionContainer.appendChild(audioPlayer);
-                  }
-
-                  if (qData.type === 'multiple-choice' || qData.type === 'audio-listen') {
-                      const optionsContainer = document.createElement('div');
-                      optionsContainer.classList.add('options-container');
-
-                      qData.options.forEach(option => {
-                          const button = document.createElement('button');
-                          button.classList.add('option-button');
-                          button.textContent = option;
-                          button.addEventListener('click', () => checkMultipleChoiceAnswer(button, option, qData.correctAnswer));
-                          optionsContainer.appendChild(button);
-                      });
-                      questionContainer.appendChild(optionsContainer);
-                  } else if (qData.type === 'flashcard') {
-                      const flashcard = document.createElement('div');
-                      flashcard.classList.add('flashcard-content');
-
-                      const wordDisplay = document.createElement('div');
-                      wordDisplay.textContent = qData.word;
-                      flashcard.appendChild(wordDisplay);
-
-                      const translationDisplay = document.createElement('div');
-                      translationDisplay.classList.add('flashcard-translation');
-                      translationDisplay.textContent = `Перевод: ${qData.answer}`;
-                      flashcard.appendChild(translationDisplay);
-
-                      const meaningDisplay = document.createElement('div');
-                      meaningDisplay.classList.add('flashcard-meaning');
-                      meaningDisplay.textContent = `Значение: ${qData.meaning}`;
-                      flashcard.appendChild(meaningDisplay);
-
-
-                      flashcard.title = 'Нажмите, чтобы увидеть перевод';
-                      flashcard.addEventListener('click', () => {
-                          if (!flashcard.classList.contains('revealed')) {
-                              flashcard.classList.add('revealed');
-                              translationDisplay.style.display = 'block';
-                              meaningDisplay.style.display = 'block';
-                              // Показываем кнопки "Правильно/Неправильно"
-                              const flashcardButtons = document.createElement('div');
-                              flashcardButtons.classList.add('flashcard-buttons');
-
-                              const correctBtn = document.createElement('button');
-                              correctBtn.classList.add('correct-btn');
-                              correctBtn.innerHTML = '<i class="fas fa-check"></i> Я знал(а)';
-                              correctBtn.addEventListener('click', (e) => {
-                                  e.stopPropagation(); // Предотвращаем повторное срабатывание клика по карточке
-                                  showFeedback(true, 'Отлично! Продолжайте в том же духе.');
-                                  enableNextButton();
-                                  disableFlashcardButtons(flashcardButtons);
-                              });
-
-                              const incorrectBtn = document.createElement('button');
-                              incorrectBtn.classList.add('incorrect-btn');
-                              incorrectBtn.innerHTML = '<i class="fas fa-times"></i> Мне нужно повторить';
-                              incorrectBtn.addEventListener('click', (e) => {
-                                  e.stopPropagation();
-                                  showFeedback(false, 'Ничего страшного! Повторите это слово.');
-                                  enableNextButton();
-                                  disableFlashcardButtons(flashcardButtons);
-                              });
-
-                              flashcardButtons.appendChild(correctBtn);
-                              flashcardButtons.appendChild(incorrectBtn);
-                              questionContainer.appendChild(flashcardButtons);
+                        function shuffleArray(array) {
+                          for (let i = array.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [array[i], array[j]] = [array[j], array[i]];
                           }
-                      });
-                      questionContainer.appendChild(flashcard);
-                  } else if (qData.type === 'audio-spell') {
-                      const inputField = document.createElement('input');
-                      inputField.type = 'text';
-                      inputField.placeholder = 'Введите слово здесь...';
-                      inputField.style.cssText = `
-                          width: calc(100% - 40px);
-                          padding: 12px 20px;
-                          margin-top: 15px;
-                          border: 1px solid var(--border-color);
-                          border-radius: 5px;
-                          font-size: 1.1em;
-                      `;
-                      questionContainer.appendChild(inputField);
+                          return array;
+                        }
 
-                      const submitButton = document.createElement('button');
-                      submitButton.classList.add('option-button'); // Используем тот же стиль кнопки
-                      submitButton.textContent = 'Проверить';
-                      submitButton.style.marginTop = '15px';
-                      submitButton.addEventListener('click', () => checkSpellingAnswer(inputField.value, qData.correctAnswer));
-                      questionContainer.appendChild(submitButton);
-                  }
-
-                  const feedbackContainer = document.createElement('div');
-                  feedbackContainer.id = 'feedback';
-                  feedbackContainer.classList.add('feedback-container');
-                  questionContainer.appendChild(feedbackContainer);
-
-                  quizContent.appendChild(questionContainer);
-                  nextQuestionBtn.style.display = 'none'; // Скрываем кнопку "Следующий" до ответа
-              }
-
-              function disableFlashcardButtons(buttonsContainer) {
-                  Array.from(buttonsContainer.children).forEach(button => button.disabled = true);
-              }
-
-              function checkMultipleChoiceAnswer(clickedButton, selectedOption, correctAnswer) {
-                  const buttons = document.querySelectorAll('.option-button');
-                  buttons.forEach(button => button.disabled = true); // Отключаем все кнопки после выбора
-
-                  const feedbackContainer = document.getElementById('feedback');
-                  feedbackContainer.style.display = 'block';
-
-                  if (selectedOption === correctAnswer) {
-                      clickedButton.classList.add('correct');
-                      showFeedback(true, `<i class="fas fa-check-circle"></i> Правильно!`);
-
-                  } else {
-                      clickedButton.classList.add('incorrect');
-                      showFeedback(false, `<i class="fas fa-times-circle"></i> Неправильно. Правильный ответ: "${correctAnswer}"`);
-                      // Выделяем правильный ответ
-                      buttons.forEach(button => {
-                          if (button.textContent === correctAnswer) {
-                              button.classList.add('correct');
+                        function getWordOptions(word){
+                          opt = shuffleArray(all_words);
+                          ans = [word, opt[0].word, opt[1].word, opt[2].word];
+                          for (i = 1; i < 4; i++){
+                            if (ans[i] == word){
+                              ans[i] = opt[4].word
+                            }
                           }
-                      });
-                  }
-                  enableNextButton();
-              }
+                          return shuffleArray(ans)
+                        }
 
-              function checkSpellingAnswer(userInput, correctAnswer) {
-                  const feedbackContainer = document.getElementById('feedback');
-                  feedbackContainer.style.display = 'block';
+                        function getTranslationOptions(translation){
+                          opt = shuffleArray(all_words);
+                          ans = [translation, opt[0].translation, opt[1].translation, opt[2].translation];
+                          for (i = 1; i < 4; i++){
+                            if (ans[i] == translation){
+                              ans[i] = opt[4].translation
+                            }
+                          }
+                          return shuffleArray(ans)
+                        }
 
-                  const normalizedUserInput = userInput.trim().toLowerCase();
-                  const normalizedCorrectAnswer = correctAnswer.trim().toLowerCase();
+                        const quizContent = document.getElementById('quiz-content');
+                        const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+      reload_neded = false;
+                        all_words = [
+                                {%for word in all_words%}
+                                {
+                                word:"{{word.word.word}}",
+                                translation:"{{word.word.response.translation}}",
+                                },
+                                {%endfor%}
+                                ]
 
-                  if (normalizedUserInput === normalizedCorrectAnswer) {
-                      showFeedback(true, `<i class="fas fa-check-circle"></i> Отлично! Вы написали правильно!`);
-                  } else {
-                      showFeedback(false, `<i class="fas fa-times-circle"></i> Неправильно. Правильный ответ: "${correctAnswer}"`);
-                  }
-                  // Отключаем поле ввода и кнопку проверки
-                  const inputField = document.querySelector('input[type="text"]');
-                  const submitButton = document.querySelector('.option-button');
-                  if (inputField) inputField.disabled = true;
-                  if (submitButton) submitButton.disabled = true;
-                  enableNextButton();
-              }
+                        questions = [
+                                {%for word in words%}
+                                    {%if word.knowledge_degree_id == 1 %}
+                                        {
+                                          id:"{{word.id}}",
+                                        type: 'audio-listen',
+                                        question: 'Послушайте слово и выберите его.',
+                                        audio: '{{word.word.audio.url}}',
+                                        options: getWordOptions("{{word.word.word}}"),
+                                        correctAnswer: '{{word.word.word}}',
+                                        translation: '{{word.word.response.translation}}'
+                                        },
+                                    {%endif%}
+                                    {%if word.knowledge_degree_id == 2 %}
+                                        {id:"{{word.id}}",
+                                            type: 'multiple-choice',
+                                            word: '{{word.word.word}}',
+                                            question: 'Как переводится слово: "{{word.word.word}}"?',
+                                            options: getTranslationOptions('{{word.word.response.translation}}'),
+                                            correctAnswer: '{{word.word.response.translation}}',
+                                            meaning: '-',
+                                            translation: '{{word.word.response.translation}}',
+                                            audio: null
+                                        },
+                                    {%endif%}
+                                    {%if word.knowledge_degree_id == 3 %}
+                                        {
+                                          id:"{{word.id}}",
+                                        type: 'audio-listen',
+                                        question: 'Послушайте слово и выберите его перевод.',
+                                        audio: '{{word.word.audio.url}}',
+                                        options: getTranslationOptions('{{word.word.response.translation}}'),
+                                        correctAnswer: '{{word.word.response.translation}}',
+                                        translation: '{{word.word.word}}'
+                                        },
+                                    {%endif%}
+                                    {%if word.knowledge_degree_id == 4 %}
+                                        {
+                                          id:"{{word.id}}",
+                                            type: 'multiple-choice',
+                                            word: '{{word.word.response.translation}}',
+                                            question: 'Как переводится слово: "{{word.word.response.translation}}"?',
+                                            options: getWordOptions('{{word.word.word}}'),
+                                            correctAnswer: '{{word.word.word}}',
+                                            meaning: '-',
+                                            translation: '{{word.word.word}}',
+                                            audio: null
+                                        },
+                                    {%endif%}
+                                    {%if word.knowledge_degree_id == 5 %}
+                                        {
+                                          id:"{{word.id}}",
+                                        type: 'flashcard',
+                                        word: '{{word.word.word}}',
+                                        question: 'Вспомните перевод слова "{{word.word.word}}".',
+                                        answer: '{{word.word.response.translation}}',
+                                        meaning: '{{word.word.response.meaning}}',
+                                        translation: '{{word.word.response.translation}}',
+                                        audio: null
+                                    },
+                                    {%endif%}
+                                    {%if word.knowledge_degree_id == 6 %}
+                                        {
+                                          id:"{{word.id}}",
+                                        type: 'flashcard',
+                                        word: '{{word.word.response.translation}}',
+                                        question: 'Вспомните перевод слова "{{word.word.response.translation}}".',
+                                        answer: '{{word.word.word}}',
+                                        meaning: '{{word.word.response.meaning}}',
+                                        translation: '{{word.word.word}}',
+                                        audio: null
+                                    },
+                                    {%endif%}
+                                {%endfor%}
+                                ];
 
-              function showFeedback(isCorrect, message) {
-                  const feedbackContainer = document.getElementById('feedback');
-                  feedbackContainer.style.display = 'block';
-                  if (isCorrect) {
-                      feedbackContainer.classList.add('correct');
-                      feedbackContainer.classList.remove('incorrect');
-                  } else {
-                      feedbackContainer.classList.add('incorrect');
-                      feedbackContainer.classList.remove('correct');
-                  }
-                  feedbackContainer.innerHTML = message;
-              }
+                        let currentQuestionIndex = 0;
 
-              function enableNextButton() {
-                  nextQuestionBtn.style.display = 'block';
-              }
+                        function loadQuestion() {
+                            if (currentQuestionIndex >= questions.length) {
+                              if (reload_neded){
+                                  location.reload();
+                              }
+                                quizContent.innerHTML = '<h2>Поздравляем! Вы прошли все вопросы!</h2>';
+                                nextQuestionBtn.style.display = 'none';
+                                return;
+                            }
 
-              nextQuestionBtn.addEventListener('click', () => {
-                  currentQuestionIndex++;
-                  loadQuestion();
-              });
+                            const qData = questions[currentQuestionIndex];
+                            quizContent.innerHTML = '';
 
-              // Загружаем первый вопрос при загрузке страницы
-              loadQuestion();
+                            const questionContainer = document.createElement('div');
+                            questionContainer.classList.add('question-container');
+
+                            const questionText = document.createElement('div');
+                            questionText.classList.add('question-text');
+                            questionText.textContent = qData.question;
+                            questionContainer.appendChild(questionText);
+
+                            if (qData.audio) {
+                                const audioPlayer = document.createElement('audio');
+                                audioPlayer.controls = true;
+                                audioPlayer.src = qData.audio;
+                                questionContainer.appendChild(audioPlayer);
+                            }
+
+                            if (qData.type === 'multiple-choice' || qData.type === 'audio-listen') {
+                                const optionsContainer = document.createElement('div');
+                                optionsContainer.classList.add('options-container');
+                                qData.options.forEach(option => {
+                                    const button = document.createElement('button');
+                                    button.classList.add('option-button');
+                                    button.textContent = option;
+                                    button.addEventListener('click', () => checkMultipleChoiceAnswer(button, option, qData.correctAnswer, qData.id));
+                                    optionsContainer.appendChild(button);
+                                });
+                                questionContainer.appendChild(optionsContainer);
+                            } else if (qData.type === 'flashcard') {
+                                const flashcard = document.createElement('div');
+                                flashcard.classList.add('flashcard-content');
+
+                                const wordDisplay = document.createElement('div');
+                                wordDisplay.textContent = qData.word;
+                                flashcard.appendChild(wordDisplay);
+
+                                const translationDisplay = document.createElement('div');
+                                translationDisplay.classList.add('flashcard-translation');
+                                translationDisplay.textContent = `Перевод: ${qData.answer}`;
+                                flashcard.appendChild(translationDisplay);
+
+                                const meaningDisplay = document.createElement('div');
+                                meaningDisplay.classList.add('flashcard-meaning');
+                                meaningDisplay.textContent = ``;
+                                flashcard.appendChild(meaningDisplay);
+
+                                flashcard.title = 'Нажмите, чтобы увидеть перевод';
+                                flashcard.addEventListener('click', () => {
+                                    if (!flashcard.classList.contains('revealed')) {
+                                        flashcard.classList.add('revealed');
+                                        translationDisplay.style.display = 'block';
+                                        meaningDisplay.style.display = 'block';
+
+                                        const flashcardButtons = document.createElement('div');
+                                        flashcardButtons.classList.add('flashcard-buttons');
+
+                                        const correctBtn = document.createElement('button');
+                                        correctBtn.classList.add('correct-btn');
+                                        correctBtn.innerHTML = '<i class="fas fa-check"></i> Я знал(а)';
+                                        correctBtn.addEventListener('click', (e) => {
+                                            e.stopPropagation();
+                                            handleFlashcardAnswer(qData.id, true, flashcardButtons);
+                                        });
+
+                                        const incorrectBtn = document.createElement('button');
+                                        incorrectBtn.classList.add('incorrect-btn');
+                                        incorrectBtn.innerHTML = '<i class="fas fa-times"></i> Мне нужно повторить';
+                                        incorrectBtn.addEventListener('click', (e) => {
+                                            e.stopPropagation();
+                                            handleFlashcardAnswer(qData.id, false, flashcardButtons);
+                                        });
+
+                                        flashcardButtons.appendChild(correctBtn);
+                                        flashcardButtons.appendChild(incorrectBtn);
+                                        questionContainer.appendChild(flashcardButtons);
+                                    }
+                                });
+                                questionContainer.appendChild(flashcard);
+                            } else if (qData.type === 'audio-spell') {
+                                const inputField = document.createElement('input');
+                                inputField.type = 'text';
+                                inputField.placeholder = 'Введите слово здесь...';
+                                inputField.style.cssText = `
+                                    width: calc(100% - 40px);
+                                    padding: 12px 20px;
+                                    margin-top: 15px;
+                                    border: 1px solid var(--border-color);
+                                    border-radius: 5px;
+                                    font-size: 1.1em;
+                                `;
+                                questionContainer.appendChild(inputField);
+
+                                const submitButton = document.createElement('button');
+                                submitButton.classList.add('option-button');
+                                submitButton.textContent = 'Проверить';
+                                submitButton.style.marginTop = '15px';
+                                submitButton.addEventListener('click', () => checkSpellingAnswer(inputField.value, qData.correctAnswer, qData.id));
+                                questionContainer.appendChild(submitButton);
+                            }
+
+                            const feedbackContainer = document.createElement('div');
+                            feedbackContainer.id = 'feedback';
+                            feedbackContainer.classList.add('feedback-container');
+                            questionContainer.appendChild(feedbackContainer);
+
+                            quizContent.appendChild(questionContainer);
+                            nextQuestionBtn.style.display = 'none';
+                        }
+
+                        function disableFlashcardButtons(buttonsContainer) {
+                            if (buttonsContainer) { // Проверяем, существует ли buttonsContainer
+                                Array.from(buttonsContainer.children).forEach(button => button.disabled = true);
+                            }
+                        }
+
+                        function checkMultipleChoiceAnswer(clickedButton, selectedOption, correctAnswer, wordId) {
+                            const buttons = document.querySelectorAll('.option-button');
+                            buttons.forEach(button => button.disabled = true);
+
+                            const feedbackContainer = document.getElementById('feedback');
+                            feedbackContainer.style.display = 'block';
+
+                            if (selectedOption === correctAnswer) {
+                                clickedButton.classList.add('correct');
+                                showFeedback(true, `<i class="fas fa-check-circle"></i> Правильно!`);
+                                updateWordStatus(wordId, 1);
+                            } else {
+                                clickedButton.classList.add('incorrect');
+                                showFeedback(false, `<i class="fas fa-times-circle"></i> Неправильно. Правильный ответ: "${correctAnswer}"`);
+                                buttons.forEach(button => {
+                                    if (button.textContent === correctAnswer) {
+                                        button.classList.add('correct');
+                                    }
+                                });
+                                updateWordStatus(wordId, 0);
+                            }
+                            enableNextButton();
+                        }
+
+                        function checkSpellingAnswer(userInput, correctAnswer, wordId) {
+                            const feedbackContainer = document.getElementById('feedback');
+                            feedbackContainer.style.display = 'block';
+
+                            const normalizedUserInput = userInput.trim().toLowerCase();
+                            const normalizedCorrectAnswer = correctAnswer.trim().toLowerCase();
+
+                            if (normalizedUserInput === normalizedCorrectAnswer) {
+                                showFeedback(true, `<i class="fas fa-check-circle"></i> Отлично! Вы написали правильно!`);
+                                updateWordStatus(wordId, 1);
+                            } else {
+                                showFeedback(false, `<i class="fas fa-times-circle"></i> Неправильно. Правильный ответ: "${correctAnswer}"`);
+                                updateWordStatus(wordId, 0);
+                            }
+
+                            const inputField = document.querySelector('input[type="text"]');
+                            const submitButton = document.querySelector('.option-button');
+                            if (inputField) inputField.disabled = true;
+                            if (submitButton) submitButton.disabled = true;
+                            enableNextButton();
+                        }
+
+                        // Новая функция для обработки ответов на флеш-карточках
+                        function handleFlashcardAnswer(wordId, isCorrect, buttonsContainer) {
+                            if (isCorrect) {
+                                showFeedback(true, 'Отлично! Продолжайте в том же духе.');
+
+
+                            } else {
+                                showFeedback(false, 'Ничего страшного! Повторите это слово.');
+
+                            }
+                            updateWordStatus(wordId, isCorrect);
+                            enableNextButton(); // Активируем кнопку "Следующий вопрос"
+                            disableFlashcardButtons(buttonsContainer); // Отключаем кнопки "Я знал(а)" и "Мне нужно повторить"
+                        }
+
+                        function showFeedback(isCorrect, message) {
+                            const feedbackContainer = document.getElementById('feedback');
+                            feedbackContainer.style.display = 'block';
+                            if (isCorrect) {
+                                feedbackContainer.classList.add('correct');
+                                feedbackContainer.classList.remove('incorrect');
+                            } else {
+                                feedbackContainer.classList.add('incorrect');
+                                feedbackContainer.classList.remove('correct');
+                            }
+                            feedbackContainer.innerHTML = message;
+                        }
+
+                        function enableNextButton() {
+                            nextQuestionBtn.style.display = 'block';
+                        }
+
+                        nextQuestionBtn.addEventListener('click', () => {
+                            currentQuestionIndex++;
+                            loadQuestion();
+                        });
+
+                        async function updateWordStatus(wordId, isCorrect) {
+                // Преобразует true в 1, false в 0
+                const numericIsCorrect = +isCorrect;
+                const apiUrl = `/saved_word_update/${wordId}/${numericIsCorrect}`;
+                try {
+                    const response = await fetch(apiUrl); // Использование const для response
+                    if (response.ok) {
+                        const json = await response.json(); // Использование const для json
+                        // Ваша логика с json.saved_word
+                        // Если вы хотите использовать исходное булево значение isCorrect, используйте его здесь
+                        if (!isCorrect){
+                            reload_neded = true;
+                        }
+                        console.log("Успешно обновлено:", json); // Добавьте для отладки
+                    } else {
+                        alert("Ошибка HTTP: " + response.status + " - " + response.statusText);
+                        console.error("Ошибка HTTP:", response.status, response.statusText);
+                    }
+                } catch (error) {
+                    console.error("Fetch error: ", error);
+                }
+            }
+
+                        loadQuestion();
     </script>
   </body>
 </html>
