@@ -1,3 +1,5 @@
+import string
+
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
@@ -16,13 +18,15 @@ from gtts import gTTS
 from datetime import datetime
 import os
 from PyMultiDictionary import MultiDictionary
+from translate import Translator
+from nltk.stem import WordNetLemmatizer
 
 
 # Create your views here.
 def catalog(request):
-    texts = Text.objects.filter(public = True)
+    texts = Text.objects.filter(public=True)
     if request.user.is_authenticated:
-        texts = texts.filter(language_id = request.user.profile.language_id)
+        texts = texts.filter(language_id=request.user.profile.language_id)
     language_levels = LanguageLevel.objects.all()
     form_values = {"searchField": "",
                    "minLevel": 1,
@@ -32,8 +36,10 @@ def catalog(request):
         form_values["minLevel"] = int(request.GET["minLevel"])
         form_values["maxLevel"] = int(request.GET["maxLevel"])
         if form_values['searchField']:
-            texts = texts.filter(text__icontains=form_values['searchField']) | texts.filter(name__icontains=form_values['searchField'])
-        texts = texts.filter(language_level_id__gte=form_values["minLevel"], language_level_id__lte=form_values["maxLevel"])
+            texts = texts.filter(text__icontains=form_values['searchField']) | texts.filter(
+                name__icontains=form_values['searchField'])
+        texts = texts.filter(language_level_id__gte=form_values["minLevel"],
+                             language_level_id__lte=form_values["maxLevel"])
 
     return render(request, "LanguageLeap/catalog.html", {
         "texts": texts,
@@ -47,22 +53,19 @@ def user_registration(request):
     languages = Language.objects.all()
     form = RegistrationForm()
 
-    if (request.method == "POST"):
+    if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
             username = form.cleaned_data["username"]
             email = form.cleaned_data["email"]
             password = form.cleaned_data["password"]
             language = request.POST["language"]
-            user = User.objects.create_user(username, email,password)
+            user = User.objects.create_user(username, email, password)
             user.save()
-            profile = Profile(language_id = language, user=user)
+            profile = Profile(language_id=language, user=user)
             profile.save()
             login(request, user)
             return redirect("leap:catalog")
-
-
-
 
     return render(request, "LanguageLeap/registration.html", {
         "languages": languages,
@@ -82,19 +85,32 @@ def user_login(request):
             return redirect("leap:catalog")
         else:
             errors.append("Неправильное имя или пароль")
-    return render(request, "LanguageLeap/login.html", {"errors":errors})
-
-
+    return render(request, "LanguageLeap/login.html", {"errors": errors})
 
 
 def user_logout(request):
     logout(request)
     return redirect("leap:login")
 
+
+def filter_words(user, text):
+    words_in_text = text.text.split()
+    set_of_words = set()
+    for word in words_in_text:
+        set_of_words.add(word.lower().strip(string.punctuation + '\n\r '))
+    saved_words = user.savedword_set.order_by("word__word")
+    filtered_words = []
+    for word in saved_words:
+        if word.word.word in set_of_words:
+            filtered_words.append(word.word)
+    return filtered_words
+
+
 @login_required
 def text(request, text_id):
     text = get_object_or_404(Text, pk=text_id)
-    return render(request, "LanguageLeap/text.html",{"text":text})
+    words = filter_words(request.user, text)
+    return render(request, "LanguageLeap/text.html", {"text": text, "words": words})
 
 
 @csrf_protect
@@ -103,7 +119,7 @@ def upload_text(request):
     form = TextForm()
     if request.method == "POST":
         form = TextForm(request.POST)
-        if (form.is_valid()):
+        if form.is_valid():
             new_text = Text()
             new_text.user = request.user
             new_text.name = form.cleaned_data["name"]
@@ -111,11 +127,11 @@ def upload_text(request):
             new_text.language = form.cleaned_data["language"]
             new_text.language_level = form.cleaned_data["language_level"]
             new_text.public = form.cleaned_data["public"]
-            if (form.cleaned_data["image"]):
+            if form.cleaned_data["image"]:
                 new_text.image = form.cleaned_data["image"]
             else:
                 new_text.image.name = "textImage/book.jpg"
-            if (form.cleaned_data["audio"]):
+            if form.cleaned_data["audio"]:
                 new_text.audio = form.cleaned_data["audio"]
             else:
                 new_text.save()
@@ -128,20 +144,16 @@ def upload_text(request):
                 # Устанавливаем путь к аудиофайлу относительно MEDIA_ROOT
                 new_text.audio.name = os.path.join('textAudio', audio_filename)
             new_text.save()
-            return redirect("leap:text", text_id = new_text.pk)
-    return render(request, "LanguageLeap/upload_text.html", {"form":form})
-
-
-
-
+            return redirect("leap:text", text_id=new_text.pk)
+    return render(request, "LanguageLeap/upload_text.html", {"form": form})
 
 
 @login_required
 def translate_word(request, language_code, word):
-    language_object = get_object_or_404(Language, code = language_code)
+    language_object = get_object_or_404(Language, code=language_code)
     try:
-        word_object = Word.objects.get(word=word, language = language_object)
-    except:
+        word_object = Word.objects.get(word=word, language=language_object)
+    except Word.DoesNotExist:
         word_object = Word()
         word_object.word = word
         word_object.language = language_object
@@ -155,20 +167,22 @@ def translate_word(request, language_code, word):
         word_object.audio.name = os.path.join('wordAudio', audio_filename)
 
         dictionary = MultiDictionary()
+        lemmatizer = WordNetLemmatizer()
 
+        meanings = dictionary.meaning(language_code, lemmatizer.lemmatize(word))[1]
 
-        translation = dictionary.translate(language_code, word)[19]
-        meanings = dictionary.meaning(language_code, word)[1]
+        translator = Translator(to_lang="ru", from_lang=language_code)
+        translation = translator.translate(word)
 
-        word_object.response = {"translation":translation, "meaning": meanings}
+        word_object.response = {"translation": translation, "meaning": meanings}
         word_object.save()
     try:
-        saved_word = SavedWord.objects.get(word = word_object,user=request.user)
-    except:
+        saved_word = SavedWord.objects.get(word=word_object, user=request.user)
+    except SavedWord.DoesNotExist:
         saved_word = SavedWord()
         saved_word.word = word_object
         saved_word.user = request.user
-    saved_word.knowledge_degree = 0
+    saved_word.knowledge_degree_id = 1
     saved_word.next_rep = datetime.now()
     saved_word.save()
     word_data = {
@@ -176,4 +190,27 @@ def translate_word(request, language_code, word):
         "response": word_object.response
     }
 
-    return JsonResponse({"word": word_data})
+    return JsonResponse(word_data)
+
+
+@login_required
+def learn_page(request):
+    saved_words = request.user.savedword_set.filter(next_rep__lt=datetime.now())
+    all_words = request.user.savedword_set.all()
+
+    return render(request, "LanguageLeap/learn.html", {"words" : saved_words, "all_words":all_words})
+
+
+def saved_word_update(request, id, is_correct):
+    saved_word = get_object_or_404(SavedWord, id=id)
+    if is_correct:
+        if saved_word.knowledge_degree_id == 6:
+            saved_word.delete()
+            return JsonResponse({"saved_word": "deleted"})
+        else:
+            saved_word.knowledge_degree_id+=1
+    else:
+        saved_word.knowledge_degree_id = (saved_word.knowledge_degree_id+1)/2
+    saved_word.next_rep = datetime.now() + saved_word.knowledge_degree.duration
+    saved_word.save()
+    return JsonResponse({"saved_word": saved_word})

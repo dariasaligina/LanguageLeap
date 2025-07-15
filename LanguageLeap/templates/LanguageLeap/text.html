@@ -186,13 +186,17 @@
                 flex-direction: row;
             }
         }
-        .word-you{
-        background: rgba(255,255,0,0.12);
-        text-decoration: underline;
+
+
+        {%for word in words%}
+        .word-{{word.word}}{
+        background: rgba(255,255,0,0.5);
         }
+        {%endfor%}
 
         audio {
-    width: 100%;
+    width: 100%;}
+
 }
     </style>
 </head>
@@ -230,7 +234,7 @@
 
         {% for word in paragraph %}
 
-            <span class="word-{{ word |lower|strip_punctuation}}">{{ word }}</span>
+            <span onclick="get_translation('{{ word |lower|strip_punctuation}}')" class="word-{{ word |lower|strip_punctuation}}">{{ word }}</span>
 
         {% endfor %}
 
@@ -247,50 +251,22 @@
             <aside class="sidebar">
                 <h3>Лексика</h3>
                 <ul class="vocabulary-list">
+
+                    {%for word in words%}
                     <li class="vocabulary-item">
+
                         <div class="vocabulary-header">
-                            <span>Magnificent - Великолепный</span>
+                            <span>{{word.word}} - {{word.response.translation}}</span>
                             <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
                         </div>
                         <div class="vocabulary-details">
-                            <p><strong>Definition:</strong> Impressively beautiful, elaborate, or extravagant; striking.</p>
-                            <p><strong>Synonyms:</strong> Splendid, grand, imposing, superb</p>
-                            <p><strong>Antonyms:</strong> Ordinary, humble, modest</p>
+                            <p><strong>Определение:</strong> {{word.response.meaning}}</p>
+
                         </div>
                     </li>
-                    <li class="vocabulary-item">
-                        <div class="vocabulary-header">
-                            <span>Primeval - Первобытный</span>
-                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
-                        </div>
-                        <div class="vocabulary-details">
-                            <p><strong>Definition:</strong> Of or resembling the earliest ages in the history of the world.</p>
-                            <p><strong>Synonyms:</strong> Ancient, prehistoric, earliest, primitive</p>
-                            <p><strong>Antonyms:</strong> Modern, recent, new</p>
-                        </div>
-                    </li>
-                    <li class="vocabulary-item">
-                        <div class="vocabulary-header">
-                            <span>Constrictor - Удав</span>
-                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
-                        </div>
-                        <div class="vocabulary-details">
-                            <p><strong>Definition:</strong> A snake that kills its prey by squeezing it.</p>
-                            <p><strong>Synonyms:</strong> Boa, python</p>
-                            <p><strong>Antonyms:</strong> N/A</p>
-                        </div>
-                    </li>
-                    <li class="vocabulary-item">
-                        <div class="vocabulary-header">
-                            <span>Pondered - Размышлял</span>
-                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
-                        </div>
-                        <div class="vocabulary-details">
-                            <p><strong>Definition:</strong> Think about (something) carefully, especially before making a decision or reaching a conclusion.</p>
-                            <p><strong>Synonyms:</strong> Consider, reflect, muse, contemplate</p>
-                            <p><strong>Antonyms:</strong> Ignore, forget, disregard</p>
-                        </div>
-                    </li>
+                    {%endfor%}
+
+
                 </ul>
             </aside>
         </div>
@@ -317,6 +293,63 @@
                 });
             });
         });
+
+
+async function get_translation(word){
+
+    if (!word) return;
+
+    const langCode = "{{ text.language.code }}";
+
+    h = document.querySelector("head");
+    st = document.createElement("style");
+    st.innerHTML = `.word-${word}{
+        background: rgba(255,255,0,1);
+        text-decoration: underline;
+        }`;
+
+h.appendChild(st);
+    try {
+        const response = await fetch(`/translate_word/${langCode}/${word}`);
+
+        if (response.ok) {
+
+            let json = await response.json();
+            console.log(json.word);
+            console.log(json.response.meaning);
+            console.log(json.response.translation);
+            vocabulary = document.getElementsByClassName("vocabulary-list")[0];
+
+            word = document.createElement("li");
+            word.className = "vocabulary-item";
+            word.innerHTML = `<div class="vocabulary-header" >
+                            <span>${json.word} - ${json.response.translation}</span>
+                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
+                        </div>
+                        <div class="vocabulary-details">
+                            <p><strong>Определение:</strong> ${json.response.meaning}</p>
+
+                        </div>`;
+
+            vocabulary.insertBefore(word, vocabulary.firstChild);
+
+            // Vocabulary toggle functionality
+
+            const vocabularyHeaders = document.querySelectorAll('.vocabulary-header');
+            vocabularyHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const item = header.closest('.vocabulary-item');
+                    item.classList.toggle('expanded');
+                });
+            });
+
+        } else {
+            alert("Ошибка HTTP: " + response.status);
+        }
+    } catch (error) {
+        console.error("Fetch error: ", error);
+    }
+}
     </script>
 </body>
 </html>

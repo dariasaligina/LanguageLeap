@@ -73,13 +73,15 @@ class Word(models.Model):
         return self.word
 
 
+class KnowledgeDegree(models.Model):
+    duration = models.DurationField()
+
+
 class SavedWord(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     word = models.ForeignKey(Word, on_delete=models.PROTECT)
-    knowledge_degree = models.IntegerField()
+    knowledge_degree = models.ForeignKey(KnowledgeDegree, on_delete=models.PROTECT)
     next_rep = models.DateTimeField()
-
-
 
     def __str__(self):
         return self.word

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Заучивание Слов</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-bg: #f5f5f5;
+        --secondary-bg: #ffffff;
+        --text-color: #333;
+        --border-color: #ddd;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --accent-color: #007bff;
+        --hover-color: #0056b3;
+        --radius: 8px;
+        --padding-base: 20px;
+      }
+      body {
+        font-family: "Roboto", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--primary-bg);
+        color: var(--text-color);
+        line-height: 1.6;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: var(--padding-base);
+        gap: var(--padding-base);
+      }
+      .header {
+        background-color: var(--secondary-bg);
+        padding: var(--padding-base);
+        border-radius: var(--radius);
+        box-shadow: 0 4px 8px var(--shadow-color);
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1.8em;
+        color: var(--text-color);
+      }
+      .quiz-section {
+        background-color: var(--secondary-bg);
+        padding: var(--padding-base);
+        border-radius: var(--radius);
+        box-shadow: 0 4px 8px var(--shadow-color);
+      }
+      .quiz-section h2 {
+        font-size: 1.5em;
+        margin-top: 0;
+        color: var(--text-color);
+      }
+      .question-container {
+        margin-bottom: 20px;
+      }
+      .question-text {
+        font-size: 1.2em;
+        margin-bottom: 15px;
+        text-align: center;
+      }
+      .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .option-button {
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1.1em;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+        text-align: left;
+      }
+      .option-button:hover {
+        background-color: var(--hover-color);
+        transform: translateY(-2px);
+      }
+      .option-button.correct {
+        background-color: #28a745; /* Green */
+      }
+      .option-button.incorrect {
+        background-color: #dc3545; /* Red */
+      }
+      .feedback-container {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 1.1em;
+        text-align: center;
+        display: none; /* Hidden by default */
+      }
+      .feedback-container.correct {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .feedback-container.incorrect {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .next-button {
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1.1em;
+        margin-top: 20px;
+        width: 100%;
+        display: none; /* Hidden by default */
+        transition: background-color 0.3s ease;
+      }
+      .next-button:hover {
+        background-color: var(--hover-color);
+      }
+
+      .flashcard-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .flashcard-buttons button {
+        padding: 10px 20px;
+        border-radius: 5px;
+        border: none;
+        color: white;
+        font-size: 1em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      .flashcard-buttons .correct-btn {
+        background-color: #28a745;
+      }
+      .flashcard-buttons .correct-btn:hover {
+        background-color: #218838;
+      }
+      .flashcard-buttons .incorrect-btn {
+        background-color: #dc3545;
+      }
+      .flashcard-buttons .incorrect-btn:hover {
+        background-color: #c82333;
+      }
+
+      audio {
+        width: 100%;
+        margin-top: 15px;
+      }
+
+      .flashcard-content {
+        background-color: #e9ecef;
+        padding: 40px;
+        border-radius: var(--radius);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+        text-align: center;
+        font-size: 1.5em;
+        min-height: 150px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: background-color 0.3s ease;
+      }
+      .flashcard-content.revealed {
+        background-color: #d4edda; /* Light green for revealed state */
+        cursor: default;
+      }
+      .flashcard-translation {
+        font-size: 1em;
+        color: #555;
+        margin-top: 10px;
+        display: none;
+      }
+      .flashcard-meaning {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>Заучивание Слов</h1>
+      </header>
+
+      <section class="quiz-section">
+        <h2>Проверьте свои знания</h2>
+        <div id="quiz-content">
+          <!-- Вопросы будут загружаться сюда JavaScript'ом -->
+        </div>
+        <button id="nextQuestionBtn" class="next-button">
+          Следующий вопрос <i class="fas fa-arrow-right"></i>
+        </button>
+      </section>
+    </div>
+
+    <script>
+          function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          // Generate a random index 'j' from 0 to 'i' (inclusive)
+          const j = Math.floor(Math.random() * (i + 1));
+
+          // Swap elements at indices 'i' and 'j'
+          // This effectively moves the current element 'i' to a random position
+          // among the unshuffled elements, and brings an unshuffled element
+          // to position 'i' to be processed in the next iteration.
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      function getWordOptions(word){
+      opt = shuffleArray(all_words);
+      ans = [word, opt[0].word, opt[1].word, opt[2].word];
+      for (i = 1; i < 4; i++){
+      if (ans[i] == word){
+      ans[i] = opt[4].word
+      }}
+      return shuffleArray(ans)
+      }
+
+
+
+      function getTranslationOptions(translation){
+      opt = shuffleArray(all_words);
+      ans = [translation, opt[0].translation, opt[1].translation, opt[2].translation];
+      for (i = 1; i < 4; i++){
+      if (ans[i] == translation){
+      ans[i] = opt[4].translation
+      }
+      }
+      return shuffleArray(ans)
+      }
+
+
+
+
+
+              const quizContent = document.getElementById('quiz-content');
+              const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+
+
+              all_words = [
+              {%for word in all_words%}
+              {
+              word:"{{word.word.word}}",
+              translation:"{{word.word.response.translation}}",
+              },
+              {%endfor%}
+              ]
+
+              questions = [
+              {%for word in words%}
+
+                  {%if word.knowledge_degree_id == 1 %}
+
+                      {
+                        id:"{{word.id}}",
+                      type: 'audio-listen',
+                      question: 'Послушайте слово и выберите его.',
+                      audio: '{{word.word.audio.url}}',
+                      options: getWordOptions("{{word.word.word}}"),
+                      correctAnswer: '{{word.word.word}}',
+
+                      translation: '{{word.word.response.translation}}'
+                      },
+                  {%endif%}
+                  {%if word.knowledge_degree_id == 2 %}
+
+                      {id:"{{word.id}}",
+                          type: 'multiple-choice',
+                          word: '{{word.word.word}}',
+                          question: 'Как переводится слово: "{{word.word.word}}"?',
+                          options: getTranslationOptions('{{word.word.response.translation}}'),
+                          correctAnswer: '{{word.word.response.translation}}',
+                          meaning: '-',
+                          translation: '{{word.word.response.translation}}',
+                          audio: null
+                      },
+                  {%endif%}
+                  {%if word.knowledge_degree_id == 3 %}
+
+                      {
+                        id:"{{word.id}}",
+                      type: 'audio-listen',
+                      question: 'Послушайте слово и выберите его перевод.',
+                      audio: '{{word.word.audio.url}}',
+                      options: getTranslationOptions('{{word.word.response.translation}}'),
+                      correctAnswer: '{{word.word.response.translation}}',
+
+                      translation: '{{word.word.word}}'
+                      },
+                  {%endif%}
+                  {%if word.knowledge_degree_id == 4 %}
+
+                      {
+                        id:"{{word.id}}",
+                          type: 'multiple-choice',
+                          word: '{{word.word.response.translation}}',
+                          question: 'Как переводится слово: "{{word.word.response.translation}}"?',
+                          options: getWordOptions('{{word.word.word}}'),
+                          correctAnswer: '{{word.word.word}}',
+                          meaning: '-',
+                          translation: '{{word.word.word}}',
+                          audio: null
+                      },
+                  {%endif%}
+                  {%if word.knowledge_degree_id == 5 %}
+
+                      {
+                        id:"{{word.id}}",
+                      type: 'flashcard',
+                      word: '{{word.word.word}}',
+                      question: 'Вспомните перевод слова "{{word.word.word}}".',
+                      answer: '{{word.word.response.translation}}',
+                      meaning: '{{word.word.response.meaning}}',
+                      translation: '{{word.word.response.translation}}',
+                      audio: null
+                  },
+                  {%endif%}
+                  {%if word.knowledge_degree_id == 6 %}
+
+                      {
+                        id:"{{word.id}}",
+                      type: 'flashcard',
+                      word: '{{word.word.response.translation}}',
+                      question: 'Вспомните перевод слова "{{word.word.response.translation}}".',
+                      answer: '{{word.word.word}}',
+                      meaning: '{{word.word.response.meaning}}',
+                      translation: '{{word.word.word}}',
+                      audio: null
+                  },
+                  {%endif%}
+
+              {%endfor%}
+
+              ];
+
+              let currentQuestionIndex = 0;
+
+              function loadQuestion() {
+                  if (currentQuestionIndex >= questions.length) {
+                      quizContent.innerHTML = '<h2>Поздравляем! Вы прошли все вопросы!</h2>';
+                      nextQuestionBtn.style.display = 'none';
+                      return;
+                  }
+
+                  const qData = questions[currentQuestionIndex];
+                  quizContent.innerHTML = ''; // Очищаем предыдущий вопрос
+
+                  const questionContainer = document.createElement('div');
+                  questionContainer.classList.add('question-container');
+
+                  const questionText = document.createElement('div');
+                  questionText.classList.add('question-text');
+                  questionText.textContent = qData.question;
+                  questionContainer.appendChild(questionText);
+
+                  // Добавляем аудио, если оно есть
+                  if (qData.audio) {
+                      const audioPlayer = document.createElement('audio');
+                      audioPlayer.controls = true;
+                      audioPlayer.src = qData.audio;
+                      questionContainer.appendChild(audioPlayer);
+                  }
+
+                  if (qData.type === 'multiple-choice' || qData.type === 'audio-listen') {
+                      const optionsContainer = document.createElement('div');
+                      optionsContainer.classList.add('options-container');
+
+                      qData.options.forEach(option => {
+                          const button = document.createElement('button');
+                          button.classList.add('option-button');
+                          button.textContent = option;
+                          button.addEventListener('click', () => checkMultipleChoiceAnswer(button, option, qData.correctAnswer));
+                          optionsContainer.appendChild(button);
+                      });
+                      questionContainer.appendChild(optionsContainer);
+                  } else if (qData.type === 'flashcard') {
+                      const flashcard = document.createElement('div');
+                      flashcard.classList.add('flashcard-content');
+
+                      const wordDisplay = document.createElement('div');
+                      wordDisplay.textContent = qData.word;
+                      flashcard.appendChild(wordDisplay);
+
+                      const translationDisplay = document.createElement('div');
+                      translationDisplay.classList.add('flashcard-translation');
+                      translationDisplay.textContent = `Перевод: ${qData.answer}`;
+                      flashcard.appendChild(translationDisplay);
+
+                      const meaningDisplay = document.createElement('div');
+                      meaningDisplay.classList.add('flashcard-meaning');
+                      meaningDisplay.textContent = `Значение: ${qData.meaning}`;
+                      flashcard.appendChild(meaningDisplay);
+
+
+                      flashcard.title = 'Нажмите, чтобы увидеть перевод';
+                      flashcard.addEventListener('click', () => {
+                          if (!flashcard.classList.contains('revealed')) {
+                              flashcard.classList.add('revealed');
+                              translationDisplay.style.display = 'block';
+                              meaningDisplay.style.display = 'block';
+                              // Показываем кнопки "Правильно/Неправильно"
+                              const flashcardButtons = document.createElement('div');
+                              flashcardButtons.classList.add('flashcard-buttons');
+
+                              const correctBtn = document.createElement('button');
+                              correctBtn.classList.add('correct-btn');
+                              correctBtn.innerHTML = '<i class="fas fa-check"></i> Я знал(а)';
+                              correctBtn.addEventListener('click', (e) => {
+                                  e.stopPropagation(); // Предотвращаем повторное срабатывание клика по карточке
+                                  showFeedback(true, 'Отлично! Продолжайте в том же духе.');
+                                  enableNextButton();
+                                  disableFlashcardButtons(flashcardButtons);
+                              });
+
+                              const incorrectBtn = document.createElement('button');
+                              incorrectBtn.classList.add('incorrect-btn');
+                              incorrectBtn.innerHTML = '<i class="fas fa-times"></i> Мне нужно повторить';
+                              incorrectBtn.addEventListener('click', (e) => {
+                                  e.stopPropagation();
+                                  showFeedback(false, 'Ничего страшного! Повторите это слово.');
+                                  enableNextButton();
+                                  disableFlashcardButtons(flashcardButtons);
+                              });
+
+                              flashcardButtons.appendChild(correctBtn);
+                              flashcardButtons.appendChild(incorrectBtn);
+                              questionContainer.appendChild(flashcardButtons);
+                          }
+                      });
+                      questionContainer.appendChild(flashcard);
+                  } else if (qData.type === 'audio-spell') {
+                      const inputField = document.createElement('input');
+                      inputField.type = 'text';
+                      inputField.placeholder = 'Введите слово здесь...';
+                      inputField.style.cssText = `
+                          width: calc(100% - 40px);
+                          padding: 12px 20px;
+                          margin-top: 15px;
+                          border: 1px solid var(--border-color);
+                          border-radius: 5px;
+                          font-size: 1.1em;
+                      `;
+                      questionContainer.appendChild(inputField);
+
+                      const submitButton = document.createElement('button');
+                      submitButton.classList.add('option-button'); // Используем тот же стиль кнопки
+                      submitButton.textContent = 'Проверить';
+                      submitButton.style.marginTop = '15px';
+                      submitButton.addEventListener('click', () => checkSpellingAnswer(inputField.value, qData.correctAnswer));
+                      questionContainer.appendChild(submitButton);
+                  }
+
+                  const feedbackContainer = document.createElement('div');
+                  feedbackContainer.id = 'feedback';
+                  feedbackContainer.classList.add('feedback-container');
+                  questionContainer.appendChild(feedbackContainer);
+
+                  quizContent.appendChild(questionContainer);
+                  nextQuestionBtn.style.display = 'none'; // Скрываем кнопку "Следующий" до ответа
+              }
+
+              function disableFlashcardButtons(buttonsContainer) {
+                  Array.from(buttonsContainer.children).forEach(button => button.disabled = true);
+              }
+
+              function checkMultipleChoiceAnswer(clickedButton, selectedOption, correctAnswer) {
+                  const buttons = document.querySelectorAll('.option-button');
+                  buttons.forEach(button => button.disabled = true); // Отключаем все кнопки после выбора
+
+                  const feedbackContainer = document.getElementById('feedback');
+                  feedbackContainer.style.display = 'block';
+
+                  if (selectedOption === correctAnswer) {
+                      clickedButton.classList.add('correct');
+                      showFeedback(true, `<i class="fas fa-check-circle"></i> Правильно!`);
+
+                  } else {
+                      clickedButton.classList.add('incorrect');
+                      showFeedback(false, `<i class="fas fa-times-circle"></i> Неправильно. Правильный ответ: "${correctAnswer}"`);
+                      // Выделяем правильный ответ
+                      buttons.forEach(button => {
+                          if (button.textContent === correctAnswer) {
+                              button.classList.add('correct');
+                          }
+                      });
+                  }
+                  enableNextButton();
+              }
+
+              function checkSpellingAnswer(userInput, correctAnswer) {
+                  const feedbackContainer = document.getElementById('feedback');
+                  feedbackContainer.style.display = 'block';
+
+                  const normalizedUserInput = userInput.trim().toLowerCase();
+                  const normalizedCorrectAnswer = correctAnswer.trim().toLowerCase();
+
+                  if (normalizedUserInput === normalizedCorrectAnswer) {
+                      showFeedback(true, `<i class="fas fa-check-circle"></i> Отлично! Вы написали правильно!`);
+                  } else {
+                      showFeedback(false, `<i class="fas fa-times-circle"></i> Неправильно. Правильный ответ: "${correctAnswer}"`);
+                  }
+                  // Отключаем поле ввода и кнопку проверки
+                  const inputField = document.querySelector('input[type="text"]');
+                  const submitButton = document.querySelector('.option-button');
+                  if (inputField) inputField.disabled = true;
+                  if (submitButton) submitButton.disabled = true;
+                  enableNextButton();
+              }
+
+              function showFeedback(isCorrect, message) {
+                  const feedbackContainer = document.getElementById('feedback');
+                  feedbackContainer.style.display = 'block';
+                  if (isCorrect) {
+                      feedbackContainer.classList.add('correct');
+                      feedbackContainer.classList.remove('incorrect');
+                  } else {
+                      feedbackContainer.classList.add('incorrect');
+                      feedbackContainer.classList.remove('correct');
+                  }
+                  feedbackContainer.innerHTML = message;
+              }
+
+              function enableNextButton() {
+                  nextQuestionBtn.style.display = 'block';
+              }
+
+              nextQuestionBtn.addEventListener('click', () => {
+                  currentQuestionIndex++;
+                  loadQuestion();
+              });
+
+              // Загружаем первый вопрос при загрузке страницы
+              loadQuestion();
+    </script>
+  </body>
+</html>
