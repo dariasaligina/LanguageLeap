@@ -4,14 +4,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.contrib.postgres.search import SearchVector
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.contrib.auth import authenticate, login, logout
 
 from mysite import settings
-from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord
+from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText
 from django.views.decorators.csrf import csrf_protect
 from .forms import RegistrationForm, TextForm
 from gtts import gTTS
@@ -112,7 +112,14 @@ def filter_words(user, text):
 def text(request, text_id):
     text = get_object_or_404(Text, pk=text_id)
     words = filter_words(request.user, text)
-    return render(request, "LanguageLeap/text.html", {"text": text, "words": words})
+
+    try:
+        saved_text = SavedText.objects.get(user = request.user, text= text)
+        text_status = saved_text.status.id
+    except:
+        text_status = 0
+
+    return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status":text_status})
 
 
 @csrf_protect
@@ -218,3 +225,53 @@ def saved_word_update(request, id, is_correct):
         saved_word.next_rep = timezone.now()
     saved_word.save()
     return JsonResponse({"saved_word": "updated"})
+
+
+@login_required
+def my_profile(request):
+    user = request.user
+    my_texts = Text.objects.filter(user=user)
+    completed_texts = Text.objects.filter(savedtext__status_id=1, savedtext__user=user)
+    current_texts = Text.objects.filter(savedtext__status_id=2, savedtext__user=user)
+    future_texts = Text.objects.filter(savedtext__status_id=3, savedtext__user=user)
+    return render(request, "LanguageLeap/profile.html", {
+        "user":user,
+        "my_texts":my_texts,
+        "completed_texts": completed_texts,
+        "current_texts":current_texts,
+        "future_texts":future_texts,
+    })
+
+
+
+def delete_text(request, text_id):
+    text = get_object_or_404(Text, id=text_id)
+    text.delete()
+    return redirect("leap:my_profile")
+
+
+@login_required
+def update_text_status(request, text_id, button_name):
+    if button_name == "completedBtn":
+        status = 1
+    elif button_name == "readLaterBtn":
+        status = 3
+    elif button_name == "readBtn":
+        status = 2
+    else:
+         raise Http404()
+    try:
+        saved_text = SavedText.objects.get(user = request.user, text_id = text_id)
+        if (saved_text.status.id == status):
+            saved_text.delete()
+        else:
+            saved_text.status_id = status
+            saved_text.save()
+    except:
+        saved_text = SavedText()
+        saved_text.user = request.user
+        saved_text.text_id = text_id
+        saved_text.status_id = status
+        saved_text.save()
+
+    return redirect("leap:text", text_id = text_id)

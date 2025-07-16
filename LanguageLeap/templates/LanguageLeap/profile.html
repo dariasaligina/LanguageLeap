@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        a{
+        text-decoration:none;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .username {
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+
+        .logout-button, .add-text-button {
+            background-color: #3498db;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-button:hover, .add-text-button:hover {
+            background-color: #2980b9;
+        }
+
+        .section {
+            width: 100%;
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+
+        .section-header {
+            background-color: #3498db;
+            color: #fff;
+            padding: 10px;
+            text-align: left;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .text-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding-top: 15px;
+            display: none;
+        }
+
+        .text-list.expanded {
+            display: grid;
+        }
+
+        .text-item {
+            position: relative;
+        }
+
+        .text-block {
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .text-block img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .text-content {
+            padding: 15px;
+        }
+
+        .text-content h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .text-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .language-level {
+            background-color: #e8f0fe;
+            color: #3498db;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .delete-text-button {
+            background-color: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .delete-text-button:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="user-info">
+            <h1 class="username">Имя Пользователя: {{user.username}}</h1>
+            <div>
+
+                <a href="{% url 'leap:logout'%}" class="add-text-button">Выйти</a>
+                <a href="{% url 'leap:upload_text'%}" class="add-text-button">Добавить текст</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header" data-section="addedTexts">Мои тексты <i class="fas fa-chevron-down"></i></div>
+            <div class="text-list" id="addedTexts">
+                {%for text in my_texts%}
+
+                <div class="text-item">
+                    <div class="text-block">
+                        <a href="{%url 'leap:text' text.id %}"><img src="{{text.image.url}}" alt="{{text.name}}"></a>
+                        <div class="text-content">
+                            <a href="{%url 'leap:text' text.id %}"><h3>{{text.name}}</h3></a>
+                            <div class="text-details">
+                                <span class="language-level">{{text.language_level.name}}</span>
+                                <button class="delete-text-button" data-text-name="{{text.name}}" data-text-id="{{text.id}}">Удалить</button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                {%endfor%}
+
+
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header" data-section="readTexts">Прочитанные тексты <i class="fas fa-chevron-down"></i></div>
+            <div class="text-list" id="readTexts">
+                {%for text in completed_texts%}
+
+                <div class="text-item">
+                    <div class="text-block">
+                        <a href="{%url 'leap:text' text.id %}"><img src="{{text.image.url}}" alt="{{text.name}}"></a>
+                        <div class="text-content">
+                            <a href="{%url 'leap:text' text.id %}"><h3>{{text.name}}</h3></a>
+                            <div class="text-details">
+                                <span class="language-level">{{text.language_level.name}}</span>
+
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                {%endfor%}
+
+
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header" data-section="readingTexts">Сейчас читаю <i class="fas fa-chevron-down"></i></div>
+            <div class="text-list" id="readingTexts">
+                {%for text in current_texts%}
+
+                <div class="text-item">
+                    <div class="text-block">
+                        <a href="{%url 'leap:text' text.id %}"><img src="{{text.image.url}}" alt="{{text.name}}"></a>
+                        <div class="text-content">
+                            <a href="{%url 'leap:text' text.id %}"><h3>{{text.name}}</h3></a>
+                            <div class="text-details">
+                                <span class="language-level">{{text.language_level.name}}</span>
+
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                {%endfor%}
+
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header" data-section="laterTexts">Буду читать <i class="fas fa-chevron-down"></i></div>
+            <div class="text-list" id="laterTexts">
+                {%for text in future_texts%}
+
+                <div class="text-item">
+                    <div class="text-block">
+                        <a href="{%url 'leap:text' text.id %}"><img src="{{text.image.url}}" alt="{{text.name}}"></a>
+                        <div class="text-content">
+                            <a href="{%url 'leap:text' text.id %}"><h3>{{text.name}}</h3></a>
+                            <div class="text-details">
+                                <span class="language-level">{{text.language_level.name}}</span>
+
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                {%endfor%}
+
+            </div>
+        </div>
+
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sectionHeaders = document.querySelectorAll('.section-header');
+
+            sectionHeaders.forEach(header => {
+                header.addEventListener('click', function () {
+                    const sectionId = this.getAttribute('data-section');
+                    const textList = document.getElementById(sectionId);
+                    const isExpanded = textList.classList.contains('expanded');
+
+                    textList.classList.toggle('expanded', !isExpanded);
+                });
+            });
+
+            const deleteButtons = document.querySelectorAll('.delete-text-button');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const textName = this.getAttribute('data-text-name');
+                    const textId = this.getAttribute("data-text-id")
+                    conf = confirm(`Удалите текст: ${textName}`);
+                    if (conf){
+                        window.location.assign(`/delete_text/${textId}`)
+
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

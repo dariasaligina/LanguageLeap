@@ -210,9 +210,9 @@
                     <p>Уровень: {{text.language_level}} </p>
             </div>
                 <div class="save-options">
-                    <button id="readBtn"><i class="fas fa-check-circle"></i> Читать</button>
-                    <button id="readLaterBtn"><i class="fas fa-bookmark"></i> Читать позже</button>
-                    <button id="completedBtn"><i class="fas fa-trophy"></i> Прочитано</button>
+                    <button id="readBtn" {% if text_status == 2 %} class="active" {%endif%}><i class="fas fa-check-circle"></i> Читать</button>
+                    <button id="readLaterBtn" {% if text_status == 3 %} class="active" {%endif%}><i class="fas fa-bookmark"></i> Читать позже</button>
+                    <button id="completedBtn"{% if text_status == 1 %} class="active" {%endif%}><i class="fas fa-trophy"></i> Прочитано</button>
                 </div>
             </div>
             <div class="user-info">
@@ -281,6 +281,8 @@
                     saveButtons.forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
                     console.log(`Text marked as: ${button.textContent.trim()}`);
+                    console.log(button.id)
+                    window.location.assign(`/update_text_status/{{text.id}}/${button.id}`)
                 });
             });
 
