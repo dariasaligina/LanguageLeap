@@ -67,7 +67,7 @@ def user_registration(request):
             profile = Profile(language_id=language, user=user)
             profile.save()
             login(request, user)
-            return redirect("leap:catalog")
+            return redirect("leap:my_profile")
 
     return render(request, "LanguageLeap/registration.html", {
         "languages": languages,
@@ -84,7 +84,7 @@ def user_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect("leap:catalog")
+            return redirect("leap:my_profile")
         else:
             errors.append("Неправильное имя или пароль")
     return render(request, "LanguageLeap/login.html", {"errors": errors})

@@ -20,8 +20,8 @@
         --radius: 8px;
         --padding-base: 20px;
       }
-      body {
-        font-family: "Roboto", sans-serif;
+      .main-content {
+        font-family: "Arial", sans-serif;
         margin: 0;
         padding: 0;
         background-color: var(--primary-bg);
@@ -40,14 +40,8 @@
         padding: var(--padding-base);
         gap: var(--padding-base);
       }
-      .header {
-        background-color: var(--secondary-bg);
-        padding: var(--padding-base);
-        border-radius: var(--radius);
-        box-shadow: 0 4px 8px var(--shadow-color);
-        text-align: center;
-      }
-      .header h1 {
+
+       h1 {
         margin: 0;
         font-size: 1.8em;
         color: var(--text-color);
@@ -200,10 +194,12 @@
     </style>
   </head>
   <body>
+  {% include 'LanguageLeap/header.html' %}
+  <div class="main-content">
     <div class="container">
-      <header class="header">
+
         <h1>Заучивание Слов</h1>
-      </header>
+
 
       <section class="quiz-section">
         <h2>Проверьте свои знания</h2>
@@ -215,7 +211,8 @@
         </button>
       </section>
     </div>
-
+  </div>
+  {% include 'LanguageLeap/footer.html' %}
     <script>
                         function shuffleArray(array) {
                           for (let i = array.length - 1; i > 0; i--) {
