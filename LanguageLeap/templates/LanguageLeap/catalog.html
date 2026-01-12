@@ -177,15 +177,12 @@
 <div class="main-content">
     <div class="container">
         <h1>Каталог текстов</h1>
-
         <div class="filters">
         <form method="get">
             <div class="filter-group search-bar">
                 <label for="searchText">Поиск по текстам:</label>
                 <input name = "searchField" type="text" id="searchText" placeholder="Искать тексты..." value="{{form_values.searchField}}">
             </div>
-
-
             <div class="filter-group level-select">
                 <label for="minLevel">Минимальный уровень:</label>
                 <select name = "minLevel" id="minLevel">
@@ -195,7 +192,6 @@
 
                 </select>
             </div>
-
             <div class="filter-group level-select">
                 <label for="maxLevel">Максимальный уровень:</label>
                 <select name = "maxLevel" id="maxLevel">
@@ -207,14 +203,11 @@
             <input type="submit" ></input>
             </form>
         </div>
-
         <div class="text-display-section" id="textDisplaySection">
-            <!-- Тексты будут динамически загружаться сюда -->
             {% for text in texts %}
             <a href = "{%url "leap:text" text.id%}">
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
-
                     <div class="text-content">
                         <h3>{{text.name}}</h3>
                         <div class="text-details">
@@ -225,10 +218,8 @@
                         </div>
                     </div></div></a>
                     {%endfor%}
-
         </div>
     </div>
-
 </div>
 {% include 'LanguageLeap/footer.html' %}
 </body>

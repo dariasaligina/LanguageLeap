@@ -206,7 +206,6 @@
         <header class="header">
             <div>
             <h1>{{text.name}}</h1>
-
             <div class="text-meta">
                     <p>Уровень: {{text.language_level}} </p>
             </div>
@@ -220,42 +219,24 @@
                 <span><i class="fas fa-user"></i> Опубликовано: {{text.user.username}}</span>
             </div>
         </header>
-
         <div class="main-content">
-
             <section class="text-area">
                 <audio src = "{{text.audio.url}}" controls></audio>
-
                 <div class="text-content">
-
-
                     {% for paragraph in text.split_text %}
-
     <p>
-
         {% for word in paragraph %}
-
             <span onclick="get_translation('{{ word |lower|strip_punctuation}}')" class="word-{{ word |lower|strip_punctuation}}">{{ word }}</span>
-
         {% endfor %}
-
     </p>
-
 {% endfor %}
-
-
                 </div>
-
-
             </section>
-
             <aside class="sidebar">
                 <h3>Лексика</h3>
                 <ul class="vocabulary-list">
-
                     {%for word in words%}
                     <li class="vocabulary-item">
-
                         <div class="vocabulary-header">
                             <span>{{word.word}} - {{word.response.translation}}</span>
                             <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
@@ -266,8 +247,6 @@
                         </div>
                     </li>
                     {%endfor%}
-
-
                 </ul>
             </aside>
         </div>
@@ -299,7 +278,6 @@
 
 
 async function get_translation(word){
-
     if (!word) return;
 
     const langCode = "{{ text.language.code }}";
@@ -311,7 +289,7 @@ async function get_translation(word){
         text-decoration: underline;
         }`;
 
-h.appendChild(st);
+    h.appendChild(st);
     try {
         const response = await fetch(`/translate_word/${langCode}/${word}`);
 

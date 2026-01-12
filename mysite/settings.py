@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-3#(*729zo#7-bod^(c6k^u0qv!piw#=cb9q&3bur_+mv7hga$s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["192.168.0.34", "127.0.0.1", "10.242.74.144"]
 
 
 # Application definition
@@ -39,7 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "polls.apps.PollsConfig",
-    "LanguageLeap.apps.LanguageleapConfig"
+    "LanguageLeap.apps.LanguageleapConfig",
+    'rest_framework.authtoken',
+    'rest_framework'
+
 ]
 
 MIDDLEWARE = [
@@ -129,3 +132,14 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',  # Обеспечьте аутентификацию
+    ),
+}

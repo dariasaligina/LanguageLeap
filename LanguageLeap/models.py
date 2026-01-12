@@ -19,9 +19,6 @@ class LanguageLevel(models.Model):
         return self.name
 
 
-
-
-
 class Text(models.Model):
     name = models.CharField(max_length=256)
     language = models.ForeignKey(Language, on_delete=models.PROTECT)
@@ -30,7 +27,7 @@ class Text(models.Model):
     audio = models.FileField(upload_to="textAudio/", blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     public = models.BooleanField(default=False)
-    image = models.ImageField(upload_to="textImage/", blank = True)
+    image = models.ImageField(upload_to="textImage/", blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     modification_date = models.DateTimeField(auto_now=True)
 
@@ -42,7 +39,6 @@ class Text(models.Model):
         for p in paragraph:
             ans.append(list(p.split(" ")))
         return ans
-
 
     @property
     def save_count(self):
@@ -67,7 +63,7 @@ class Word(models.Model):
     word = models.CharField(max_length=128)
     language = models.ForeignKey(Language, on_delete=models.PROTECT)
     audio = models.FileField(upload_to="wordAudio/", blank=True)
-    response = models.JSONField(blank = True)
+    response = models.JSONField(blank=True)
 
     def __str__(self):
         return self.word
@@ -91,15 +87,14 @@ class SavedTextStatus(models.Model):
     name = models.CharField(max_length=128)
 
     def __str__(self):
-        return self.name+ " "+str(self.id)
+        return self.name + " " + str(self.id)
 
 
 class SavedText(models.Model):
-    user = models.ForeignKey(User, on_delete= models.CASCADE)
-    text = models.ForeignKey(Text, on_delete= models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    text = models.ForeignKey(Text, on_delete=models.CASCADE)
     save_date = models.DateTimeField(auto_now_add=True)
-    status = models.ForeignKey(SavedTextStatus, on_delete= models.PROTECT)
+    status = models.ForeignKey(SavedTextStatus, on_delete=models.PROTECT)
 
     def __str__(self):
         return self.text.name
-

@@ -5,20 +5,20 @@ from .models import Text
 
 
 class RegistrationForm(forms.Form):
-    username = forms.CharField(label = "Имя пользователя", max_length=100)
+    username = forms.CharField(label="Имя пользователя", max_length=100)
     email = forms.CharField(widget=forms.EmailInput)
-    password = forms.CharField(widget=forms.PasswordInput,label = "Пароль")
+    password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
     confirm_password = forms.CharField(widget=forms.PasswordInput, label="Повторите пароль")
 
     def clean_username(self):
         username = self.cleaned_data['username']
-        if User.objects.filter(username = username).exists():
+        if User.objects.filter(username=username).exists():
             raise forms.ValidationError("Пользователь с данным именем уже существует")
         return username
 
     def clean_email(self):
         email = self.cleaned_data['email']
-        if User.objects.filter(email = email).exists():
+        if User.objects.filter(email=email).exists():
             raise forms.ValidationError("Пользователь с данным email уже существует")
         return email
 
