@@ -295,7 +295,7 @@
     subDomain: { type: 'day',radius: 2},
     start: new Date(2026, 0, 1),
     data: { type:"json",
-            source: "{% url 'leap:get_heatmap_data'%}",
+            source: "{% url 'leap:get_heatmap_data' user.username%}",
             x: d => d.creation_date,
             y: d => d.cards_done+d.saved_words,
             defaultValue: 0,},

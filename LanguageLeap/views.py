@@ -572,11 +572,13 @@ class api_register_user(APIView):
 
 
 
-def get_heatmap_data(request):
-    saved_words_subquery = SavedWord.objects.filter(user_id=6).values(
+def get_heatmap_data(request, user_name):
+
+    user = get_object_or_404(User, username=user_name)
+    saved_words_subquery = SavedWord.objects.filter(user_id=user.id).values(
         'creation_date').annotate(saved_words=Count('id')).values("creation_date",'saved_words')
 
-    results = ActivityTracker.objects.filter(user_id=6).values('creation_date', "counter")
+    results = ActivityTracker.objects.filter(user_id=user.id).values('creation_date', "counter")
     ans = []
     for result in results:
 
