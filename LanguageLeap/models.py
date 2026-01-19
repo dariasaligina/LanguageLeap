@@ -78,6 +78,7 @@ class SavedWord(models.Model):
     word = models.ForeignKey(Word, on_delete=models.PROTECT)
     knowledge_degree = models.ForeignKey(KnowledgeDegree, on_delete=models.PROTECT)
     next_rep = models.DateTimeField()
+    creation_date = models.DateField(auto_now_add=True)
 
     def __str__(self):
         return self.word
@@ -98,3 +99,15 @@ class SavedText(models.Model):
 
     def __str__(self):
         return self.text.name
+
+class ActivityTracker(models.Model):
+    creation_date = models.DateField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    counter = models.IntegerField(default=0)
+
+    @property
+    def add(self):
+        self.counter+=1
+        self.save()
+
+

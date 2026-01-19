@@ -1,6 +1,8 @@
 import json
 import string
 
+from django.db.models import Count, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth.decorators import login_required
@@ -19,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mysite import settings
-from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText
+from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from .forms import RegistrationForm, TextForm
 from gtts import gTTS
@@ -570,3 +572,23 @@ class api_register_user(APIView):
 
 
 
+def get_heatmap_data(request):
+    saved_words_subquery = SavedWord.objects.filter(user_id=6).values(
+        'creation_date').annotate(saved_words=Count('id')).values("creation_date",'saved_words')
+
+    results = ActivityTracker.objects.filter(user_id=6).values('creation_date', "counter")
+    ans = []
+    for result in results:
+
+        value = {"creation_date": result["creation_date"], "cards_done": result["counter"], "saved_words": 0}
+        q = saved_words_subquery.filter(creation_date = value["creation_date"])
+        if q:
+
+            value["saved_words"] = q[0]["saved_words"]
+        ans.append(value)
+    for result in saved_words_subquery:
+        value = {"creation_date": result["creation_date"], "cards_done": 0, "saved_words": result["saved_words"]}
+        q = results.filter(creation_date=value["creation_date"])
+        if not q:
+            ans.append(value)
+    return JsonResponse(ans, safe=0)

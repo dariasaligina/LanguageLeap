@@ -24,5 +24,6 @@ urlpatterns = [
     path("api/update_text_status/<int:text_id>/<int:status>", views.update_text_status_api.as_view(),
          name="api_update_text_status"),
     path("api/new_text", views.api_new_text.as_view(), name= "api_new_text"),
-    path("api/register", views.api_register_user.as_view(), name="api_register")
+    path("api/register", views.api_register_user.as_view(), name="api_register"),
+    path("get_heatmap_data", views.get_heatmap_data, name="get_heatmap_data")
 ]

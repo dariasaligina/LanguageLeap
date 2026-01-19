@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Личный кабинет</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- v6 is also supported -->
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css">
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/cal-heatmap/dist/plugins/Tooltip.min.js"></script>
     <style>
 
         .main-content {
@@ -161,6 +168,8 @@
     <div class="container">
         <div class="user-info">
             <h1 class="username">Имя Пользователя: {{user.username}}</h1>
+
+
             <div>
 
                 <a href="{% url 'leap:logout'%}" class="add-text-button">Выйти</a>
@@ -261,11 +270,62 @@
 
             </div>
         </div>
-
+    <div id="cal-heatmap"></div>
     </div>
 </div>
 {% include 'LanguageLeap/footer.html' %}
     <script>
+
+
+
+
+    const cal = new CalHeatmap();
+
+
+
+    cal.paint({
+
+    date:{locale: 'ru',timezone: 'Europe/Moscow', highlight: [
+
+      new Date(), // Highlight today
+    ],},
+
+    domain: { type: 'month' },
+
+    subDomain: { type: 'day',radius: 2},
+    start: new Date(2026, 0, 1),
+    data: { type:"json",
+            source: "{% url 'leap:get_heatmap_data'%}",
+            x: d => d.creation_date,
+            y: d => d.cards_done+d.saved_words,
+            defaultValue: 0,},
+
+    scale: {
+        color: {
+
+          scheme: 'Blues',
+          type: 'linear',
+          domain: [0, 50],
+        },
+  },
+  }, [[
+      Tooltip,
+      {
+        text: function (creation_date ,value) {
+          return (
+            (creation_date ? `${new Date(creation_date).toLocaleDateString()} Повторено или добавлено слов: ${value}
+    `:"Нет данных")
+          );
+        },
+      },
+    ]]);
+
+
+
+
+
+
+
         document.addEventListener('DOMContentLoaded', function () {
             const sectionHeaders = document.querySelectorAll('.section-header');
 
