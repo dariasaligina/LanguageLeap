@@ -1,6 +1,7 @@
 import json
 import string
 
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from rest_framework import status
@@ -21,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mysite import settings
-from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker
+from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, KnownWord
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from .forms import RegistrationForm, TextForm
 from gtts import gTTS
@@ -32,6 +33,9 @@ from translate import Translator
 from nltk.stem import WordNetLemmatizer
 from django.utils import timezone
 from datetime import timedelta
+from google import genai
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 
 # Create your views here.
@@ -105,23 +109,17 @@ def user_logout(request):
     return redirect("leap:login")
 
 
-def filter_words(user, text):
-    words_in_text = text.text.split()
-    set_of_words = set()
-    for word in words_in_text:
-        set_of_words.add(word.lower().strip(string.punctuation + '\n\r '))
-    saved_words = user.savedword_set.order_by("word__word")
-    filtered_words = []
-    for word in saved_words:
-        if word.word.word in set_of_words:
-            filtered_words.append(word.word)
-    return filtered_words
+def filter_words(user, text_id):
+
+    saved_words = user.savedword_set.filter(text_id=text_id).order_by("word__word")
+
+    return saved_words
 
 
 @login_required
 def text(request, text_id):
     text = get_object_or_404(Text, pk=text_id)
-    words = filter_words(request.user, text)
+    words = filter_words(request.user, text_id)
     try:
         saved_text = SavedText.objects.get(user = request.user, text= text)
         text_status = saved_text.status.id
@@ -143,7 +141,6 @@ class api_text(APIView):
         return JsonResponse({"text": {
             "id": text.id, "name": text.name, "text": text.text, "audio": text.audio.url
         }, "text_status": text_status})
-
 
 
 @csrf_protect
@@ -180,56 +177,82 @@ def upload_text(request):
     return render(request, "LanguageLeap/upload_text.html", {"form": form})
 
 
-
 class translate_word(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, language_code, word):
-        language_object = get_object_or_404(Language, code=language_code)
+    def get(self, request, text_id, paragrahp, word_number):
         try:
-            word_object = Word.objects.get(word=word, language=language_object)
+            word_object = Word.objects.get(text_id=text_id, paragrahp=paragrahp, word_in_paragraph=word_number)
         except Word.DoesNotExist:
+            text = get_object_or_404(Text, pk=text_id)
+            try:
+                word = text.get_word(paragrahp,word_number)
+            except:
+                raise Http404()
             print("new word:", word)
-            word_object = Word()
-            word_object.word = word
-            word_object.language = language_object
+            word_object = Word(text_id = text_id, paragrahp=paragrahp, word_in_paragraph=word_number)
 
             audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
             os.makedirs(audio_dir, exist_ok=True)
-            audio_filename = f"{word}-{language_code}.mp3"
+            audio_filename = f"{word}-{text.language.code}.mp3"
             audio_path = os.path.join(audio_dir, audio_filename)
-            audio = gTTS(text=word, lang=language_code)
+            audio = gTTS(text=word, lang=text.language.code)
             audio.save(audio_path)
             word_object.audio.name = os.path.join('wordAudio', audio_filename)
 
 
-            dictionary = MultiDictionary()
-            lemmatizer = WordNetLemmatizer()
-            # TODO: исправить определения
+            client = genai.Client()
 
-            #meanings = dictionary.meaning(language_code, lemmatizer.lemmatize(word))[1]
-            meanings = ""
+            class Responce(BaseModel):
+                word: str = Field(description="Исходное слово в начальной форме или выражение")
+                translation: str = Field(description="перевод слова или выражения на русский язык")
+                definition: str = Field(description="объяснение заначения слова на исходном языке")
+                synonyms: Optional[List[str]] = Field(description="список из трех синонимов слова")
+                antonyms: Optional[List[str]] = Field(description="список из трех антонимов слова")
 
+            prompt = f"""
+            ты являешься учителем иностранного языка. твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number+1} слово в абзаце): 
+            {"".join(text.get_paragraph(paragrahp))}
+            в ответе выведи: 
+            1.исходное слово, если слово является частью фразеологизма или другого неразрывного выражения напиши все выражение, если слово находится не в начальной форме приведи его в начальную форму
+            2. перевод слова или выражения из первого пункта на русский язык с учетом контекста
+            3. определение(объяснение) слова или выражение из первого пункта на исходном языке, понятное ученику
+            4. если можешь приведи список из 3 синонимов к слову или выражению из 1 пункта(синоним также может быть словом или выражением)
+            5. если можешь приведи список из 3 антонимов к слову или выражению из 1 пункта(антоним также может быть словом или выражением)
+            """
+            print(prompt)
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                    "response_json_schema": Responce.model_json_schema(),
+                },
+            )
 
-            translator = Translator(to_lang="ru", from_lang=language_code)
-            translation = translator.translate(word)
+            response = Responce.model_validate_json(response.text)
+            print(response)
 
+            word_object.word=response.word
+            word_object.translation=response.translation
+            word_object.definition = response.definition
+            word_object.synonyms = response.synonym
+            word_object.antonyms = response.antonym
 
-            word_object.response = {"translation": translation, "meaning": meanings}
-            word_object.save()
             print("word_object is ready.")
-        try:
-            saved_word = SavedWord.objects.get(word=word_object, user=request.user)
-        except SavedWord.DoesNotExist:
-            saved_word = SavedWord()
-            saved_word.word = word_object
-            saved_word.user = request.user
+
+        saved_word = SavedWord()
+        saved_word.word = word_object
+        saved_word.user = request.user
         saved_word.knowledge_degree_id = 1
         saved_word.next_rep = datetime.now()
         saved_word.save()
         word_data = {
-            "word": word,
-            "response": word_object.response
+            "word": response.word,
+            "translation": response.translation,
+            "definition": response.definition,
+            "synonyms": response.synonym,
+            "antonyms": response.antonym
         }
 
         return JsonResponse(word_data)
@@ -246,8 +269,20 @@ def learn_page(request):
 def saved_word_update(request, id, is_correct):
     print("saved_word_update", id, is_correct)
     saved_word = get_object_or_404(SavedWord, id=id)
+    if (saved_word.user!= request.user):
+        raise PermissionDenied
     if is_correct:
+        try:
+            at = ActivityTracker.objects.get(user=saved_word.user, creation_date=timezone.now().date())
+            at.add()
+        except:
+            at = ActivityTracker(user=saved_word.user)
+            at.save()
+
+
         if saved_word.knowledge_degree_id == 6:
+            kw = KnownWord(word=saved_word.word, user=saved_word.user)
+            kw.save()
             saved_word.delete()
             return JsonResponse({"saved_word": "deleted"})
         else:
@@ -283,7 +318,6 @@ def delete_text(request, text_id):
     return redirect("leap:my_profile")
 
 
-
 class update_text_status_api(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -302,7 +336,6 @@ class update_text_status_api(APIView):
             saved_text.status_id = status
             saved_text.save()
         return JsonResponse({"result": "done"})
-
 
 
 @login_required
@@ -389,7 +422,6 @@ def api_login(request):
     }, status=405)
 
 
-
 class api_learn_page(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -420,7 +452,6 @@ class api_learn_page(APIView):
             })
 
         return JsonResponse({"words":  saved_words_list, "all_words": all_words_list})
-
 
 
 class api_profile(APIView):
@@ -479,7 +510,6 @@ class api_profile(APIView):
             "current_texts": current_text_list,
             "future_texts": future_text_list
         })
-
 
 
 class api_new_text(APIView):
@@ -543,7 +573,6 @@ class api_new_text(APIView):
             )
 
 
-
 class api_register_user(APIView):
     permission_classes = [AllowAny]
 
@@ -569,7 +598,6 @@ class api_register_user(APIView):
                 {"error": f"An error occurred while saving: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
 
 def get_heatmap_data(request, user_name):

@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -44,6 +45,14 @@ class Text(models.Model):
     def save_count(self):
         return self.savedtext_set.count()
 
+    @property
+    def get_paragraph(self, paragraph_number):
+        return self.split_text()[paragraph_number]
+
+    @property
+    def get_paragraph(self, paragraph_number, word_number):
+        return self.get_paragraph(paragraph_number)[word_number]
+
     def __str__(self):
         return self.name
 
@@ -60,10 +69,17 @@ class Profile(models.Model):
 
 
 class Word(models.Model):
-    word = models.CharField(max_length=128)
-    language = models.ForeignKey(Language, on_delete=models.PROTECT)
-    audio = models.FileField(upload_to="wordAudio/", blank=True)
-    response = models.JSONField(blank=True)
+    word = models.CharField(max_length=256)
+    audio = models.FileField(upload_to="wordAudio/")
+
+    translation = models.CharField(max_length=256)
+    definition = models.TextField()
+    synonyms = ArrayField(models.CharField(max_length=256), null=True)
+    antonyms = ArrayField(models.CharField(max_length=256), null=True)
+
+    text = models.ForeignKey(Text, on_delete=models.PROTECT)
+    paragraph = models.IntegerField()
+    word_in_paragraph = models.IntegerField()
 
     def __str__(self):
         return self.word
@@ -100,14 +116,21 @@ class SavedText(models.Model):
     def __str__(self):
         return self.text.name
 
+
 class ActivityTracker(models.Model):
     creation_date = models.DateField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    counter = models.IntegerField(default=0)
+    counter = models.IntegerField(default=1)
 
     @property
     def add(self):
-        self.counter+=1
+        self.counter += 1
         self.save()
+
+
+class KnownWord(models.Model):
+    creation_date = models.DateField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    word = models.ForeignKey(Word, on_delete=models.PROTECT)
 
 
