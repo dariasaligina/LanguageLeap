@@ -45,12 +45,15 @@ class Text(models.Model):
     def save_count(self):
         return self.savedtext_set.count()
 
-    @property
-    def get_paragraph(self, paragraph_number):
-        return self.split_text()[paragraph_number]
 
-    @property
-    def get_paragraph(self, paragraph_number, word_number):
+    def get_paragraph(self, paragraph_number):
+
+
+        return self.split_text[paragraph_number]
+
+
+    def get_word(self, paragraph_number, word_number):
+
         return self.get_paragraph(paragraph_number)[word_number]
 
     def __str__(self):
@@ -126,6 +129,12 @@ class ActivityTracker(models.Model):
     def add(self):
         self.counter += 1
         self.save()
+
+
+class KnownWord(models.Model):
+    creation_date = models.DateField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    word = models.ForeignKey(Word, on_delete=models.PROTECT)
 
 
 class KnownWord(models.Model):

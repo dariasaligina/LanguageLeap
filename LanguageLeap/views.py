@@ -180,17 +180,19 @@ def upload_text(request):
 class translate_word(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, text_id, paragrahp, word_number):
+    def get(self, request, text_id, paragraph, word_number):
         try:
-            word_object = Word.objects.get(text_id=text_id, paragrahp=paragrahp, word_in_paragraph=word_number)
+            word_object = Word.objects.get(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
         except Word.DoesNotExist:
             text = get_object_or_404(Text, pk=text_id)
+
+
             try:
-                word = text.get_word(paragrahp,word_number)
+                word = text.get_word(paragraph,word_number)
             except:
                 raise Http404()
             print("new word:", word)
-            word_object = Word(text_id = text_id, paragrahp=paragrahp, word_in_paragraph=word_number)
+            word_object = Word(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
 
             audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
             os.makedirs(audio_dir, exist_ok=True)
@@ -212,7 +214,7 @@ class translate_word(APIView):
 
             prompt = f"""
             ты являешься учителем иностранного языка. твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number+1} слово в абзаце): 
-            {"".join(text.get_paragraph(paragrahp))}
+            {" ".join(text.get_paragraph(paragraph))}
             в ответе выведи: 
             1.исходное слово, если слово является частью фразеологизма или другого неразрывного выражения напиши все выражение, если слово находится не в начальной форме приведи его в начальную форму
             2. перевод слова или выражения из первого пункта на русский язык с учетом контекста
@@ -233,11 +235,12 @@ class translate_word(APIView):
             response = Responce.model_validate_json(response.text)
             print(response)
 
-            word_object.word=response.word
-            word_object.translation=response.translation
+            word_object.word = response.word
+            word_object.translation = response.translation
             word_object.definition = response.definition
-            word_object.synonyms = response.synonym
-            word_object.antonyms = response.antonym
+            word_object.synonyms = response.synonyms or None
+            word_object.antonyms = response.antonyms or None
+            word_object.save()
 
             print("word_object is ready.")
 
@@ -248,11 +251,11 @@ class translate_word(APIView):
         saved_word.next_rep = datetime.now()
         saved_word.save()
         word_data = {
-            "word": response.word,
-            "translation": response.translation,
-            "definition": response.definition,
-            "synonyms": response.synonym,
-            "antonyms": response.antonym
+            "word": word_object.word,
+            "translation": word_object.translation,
+            "definition": word_object.definition,
+            "synonyms": word_object.synonyms,
+            "antonyms": word_object.antonyms
         }
 
         return JsonResponse(word_data)
