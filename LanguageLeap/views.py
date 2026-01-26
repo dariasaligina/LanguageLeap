@@ -111,7 +111,7 @@ def user_logout(request):
 
 def filter_words(user, text_id):
 
-    saved_words = user.savedword_set.filter(text_id=text_id).order_by("word__word")
+    saved_words = user.savedword_set.filter(word__text_id=text_id).order_by("word__word")
 
     return saved_words
 
@@ -125,6 +125,8 @@ def text(request, text_id):
         text_status = saved_text.status.id
     except:
         text_status = 0
+    for word in words:
+        print(word.word.synonyms)
     return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status":text_status})
 
 
@@ -222,18 +224,27 @@ class translate_word(APIView):
             4. если можешь приведи список из 3 синонимов к слову или выражению из 1 пункта(синоним также может быть словом или выражением)
             5. если можешь приведи список из 3 антонимов к слову или выражению из 1 пункта(антоним также может быть словом или выражением)
             """
-            print(prompt)
-            response = client.models.generate_content(
-                model="gemini-3-flash-preview",
-                contents=prompt,
-                config={
-                    "response_mime_type": "application/json",
-                    "response_json_schema": Responce.model_json_schema(),
-                },
-            )
 
-            response = Responce.model_validate_json(response.text)
-            print(response)
+            for attempt in range(3):
+                response = client.models.generate_content(
+                    model="gemini-3-flash-preview",
+                    contents=prompt,
+                    config={
+                        "response_mime_type": "application/json",
+                        "response_json_schema": Responce.model_json_schema(),
+                    },
+                )
+                try:
+                    response = Responce.model_validate_json(response.text)
+                    break
+                except Exception as e:
+                    print(f"Ошибка валидации: {e}. Повторная попытка...")
+                    if attempt == 2:
+                        raise
+
+
+
+
 
             word_object.word = response.word
             word_object.translation = response.translation
@@ -242,7 +253,7 @@ class translate_word(APIView):
             word_object.antonyms = response.antonyms or None
             word_object.save()
 
-            print("word_object is ready.")
+
 
         saved_word = SavedWord()
         saved_word.word = word_object

@@ -189,7 +189,7 @@
 
 
         {%for word in words%}
-        .word-{{word.word}}{
+        .word-{{word.word.paragraph}}-{{word.word.word_in_paragraph}}{
         background: rgba(255,255,0,0.5);
         }
         {%endfor%}
@@ -224,9 +224,9 @@
                 <audio src = "{{text.audio.url}}" controls></audio>
                 <div class="text-content">
                     {% for paragraph in text.split_text %}
-    <p>
+    <p class="paragraph-{{forloop.counter0}}">
         {% for word in paragraph %}
-            <span onclick="get_translation('{{ word |lower|strip_punctuation}}')" class="word-{{ word |lower|strip_punctuation}}">{{ word }}</span>
+            <span onclick="get_translation({{forloop.parentloop.counter0}},{{forloop.counter0}})" class="word-{{forloop.parentloop.counter0}}-{{forloop.counter0}}">{{ word }}</span>
         {% endfor %}
     </p>
 {% endfor %}
@@ -238,11 +238,17 @@
                     {%for word in words%}
                     <li class="vocabulary-item">
                         <div class="vocabulary-header">
-                            <span>{{word.word}} - {{word.response.translation}}</span>
+                            <span>{{word.word.word}} - {{word.word.translation}}</span>
                             <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
                         </div>
                         <div class="vocabulary-details">
-                            <p><strong>Определение:</strong> {{word.response.meaning}}</p>
+                            <p><strong>Определение:</strong> {{word.word.definition}}</p>
+                            {%if word.word.synonyms != null%}
+                                <p><strong>Синонимы:</strong> {{word.word.synonyms|join:", "}}</p>
+                            {% endif %}
+                            {%if word.word.antonyms != null%}
+                                <p><strong>Антонимы:</strong> {{word.word.antonyms|join:", "}}</p>
+                            {% endif %}
 
                         </div>
                     </li>
@@ -277,40 +283,45 @@
         });
 
 
-async function get_translation(word){
-    if (!word) return;
+async function get_translation(paragraph_id, word_id){
 
-    const langCode = "{{ text.language.code }}";
+
 
     h = document.querySelector("head");
     st = document.createElement("style");
-    st.innerHTML = `.word-${word}{
+    st.innerHTML = `.word-${paragraph_id}-${word_id}{
         background: rgba(255,255,0,1);
         text-decoration: underline;
         }`;
 
     h.appendChild(st);
     try {
-        const response = await fetch(`/translate_word/${langCode}/${word}`);
+        const response = await fetch(`/translate_word/{{text.id}}/${paragraph_id}/${word_id}`);
 
         if (response.ok) {
 
             let json = await response.json();
             console.log(json.word);
-            console.log(json.response.meaning);
-            console.log(json.response.translation);
+            console.log(json.meaning);
+            console.log(json.translation);
             vocabulary = document.getElementsByClassName("vocabulary-list")[0];
 
             word = document.createElement("li");
             word.className = "vocabulary-item";
             word.innerHTML = `<div class="vocabulary-header" >
-                            <span>${json.word} - ${json.response.translation}</span>
+                            <span>${json.word} - ${json.translation}</span>
                             <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
                         </div>
                         <div class="vocabulary-details">
-                            <p><strong>Определение:</strong> ${json.response.meaning}</p>
-
-                        </div>`;
+                            <p><strong>Определение:</strong> ${json.definition}</p>
+                            `;
+            if (json.synonyms && json.synonyms.length > 0) {
+                word.innerHTML += `<p><strong>Синонимы: </strong>${json.synonyms.join(', ')}</p>`;
+            }
+            if (json.antonyms && json.antonyms.length > 0) {
+                word.innerHTML += `<p><strong>Антонимы: </strong>${json.antonyms.join(', ')}</p>`;
+            }
+            word.innerHTML += `</div>`;
 
             vocabulary.insertBefore(word, vocabulary.firstChild);
 
