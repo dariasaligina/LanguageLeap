@@ -125,8 +125,8 @@ class ActivityTracker(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     counter = models.IntegerField(default=1)
 
-    @property
-    def add(self):
+
+    def plus_one(self):
         self.counter += 1
         self.save()
 

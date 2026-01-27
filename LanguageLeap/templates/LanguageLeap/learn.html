@@ -251,7 +251,7 @@
                                 {%for word in all_words%}
                                 {
                                 word:"{{word.word.word}}",
-                                translation:"{{word.word.response.translation}}",
+                                translation:"{{word.word.translation}}",
                                 },
                                 {%endfor%}
                                 ]
@@ -266,7 +266,7 @@
                                         audio: '{{word.word.audio.url}}',
                                         options: getWordOptions("{{word.word.word}}"),
                                         correctAnswer: '{{word.word.word}}',
-                                        translation: '{{word.word.response.translation}}'
+                                        translation: '{{word.word.translation}}'
                                         },
                                     {%endif%}
                                     {%if word.knowledge_degree_id == 2 %}
@@ -274,10 +274,10 @@
                                             type: 'multiple-choice',
                                             word: '{{word.word.word}}',
                                             question: 'Как переводится слово: "{{word.word.word}}"?',
-                                            options: getTranslationOptions('{{word.word.response.translation}}'),
-                                            correctAnswer: '{{word.word.response.translation}}',
+                                            options: getTranslationOptions('{{word.word.translation}}'),
+                                            correctAnswer: '{{word.word.translation}}',
                                             meaning: '-',
-                                            translation: '{{word.word.response.translation}}',
+                                            translation: '{{word.word.translation}}',
                                             audio: null
                                         },
                                     {%endif%}
@@ -287,8 +287,8 @@
                                         type: 'audio-listen',
                                         question: 'Послушайте слово и выберите его перевод.',
                                         audio: '{{word.word.audio.url}}',
-                                        options: getTranslationOptions('{{word.word.response.translation}}'),
-                                        correctAnswer: '{{word.word.response.translation}}',
+                                        options: getTranslationOptions('{{word.word.translation}}'),
+                                        correctAnswer: '{{word.word.translation}}',
                                         translation: '{{word.word.word}}'
                                         },
                                     {%endif%}
@@ -296,8 +296,8 @@
                                         {
                                           id:"{{word.id}}",
                                             type: 'multiple-choice',
-                                            word: '{{word.word.response.translation}}',
-                                            question: 'Как переводится слово: "{{word.word.response.translation}}"?',
+                                            word: '{{word.word.translation}}',
+                                            question: 'Как переводится слово: "{{word.word.translation}}"?',
                                             options: getWordOptions('{{word.word.word}}'),
                                             correctAnswer: '{{word.word.word}}',
                                             meaning: '-',
@@ -311,9 +311,9 @@
                                         type: 'flashcard',
                                         word: '{{word.word.word}}',
                                         question: 'Вспомните перевод слова "{{word.word.word}}".',
-                                        answer: '{{word.word.response.translation}}',
-                                        meaning: '{{word.word.response.meaning}}',
-                                        translation: '{{word.word.response.translation}}',
+                                        answer: '{{word.word.translation}}',
+                                        meaning: '{{word.word.meaning}}',
+                                        translation: '{{word.word.translation}}',
                                         audio: null
                                     },
                                     {%endif%}
@@ -321,10 +321,10 @@
                                         {
                                           id:"{{word.id}}",
                                         type: 'flashcard',
-                                        word: '{{word.word.response.translation}}',
-                                        question: 'Вспомните перевод слова "{{word.word.response.translation}}".',
+                                        word: '{{word.word.translation}}',
+                                        question: 'Вспомните перевод слова "{{word.word.translation}}".',
                                         answer: '{{word.word.word}}',
-                                        meaning: '{{word.word.response.meaning}}',
+                                        meaning: '{{word.word.meaning}}',
                                         translation: '{{word.word.word}}',
                                         audio: null
                                     },

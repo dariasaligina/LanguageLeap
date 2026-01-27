@@ -125,8 +125,7 @@ def text(request, text_id):
         text_status = saved_text.status.id
     except:
         text_status = 0
-    for word in words:
-        print(word.word.synonyms)
+
     return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status":text_status})
 
 
@@ -196,13 +195,7 @@ class translate_word(APIView):
             print("new word:", word)
             word_object = Word(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
 
-            audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
-            os.makedirs(audio_dir, exist_ok=True)
-            audio_filename = f"{word}-{text.language.code}.mp3"
-            audio_path = os.path.join(audio_dir, audio_filename)
-            audio = gTTS(text=word, lang=text.language.code)
-            audio.save(audio_path)
-            word_object.audio.name = os.path.join('wordAudio', audio_filename)
+
 
 
             client = genai.Client()
@@ -251,6 +244,15 @@ class translate_word(APIView):
             word_object.definition = response.definition
             word_object.synonyms = response.synonyms or None
             word_object.antonyms = response.antonyms or None
+
+            audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
+            os.makedirs(audio_dir, exist_ok=True)
+            audio_filename = f"{word_object.text.id}-{word_object.paragraph}-{word_object.word_in_paragraph}.mp3"
+            audio_path = os.path.join(audio_dir, audio_filename)
+            audio = gTTS(text=word_object.word, lang=text.language.code)
+            audio.save(audio_path)
+            word_object.audio.name = os.path.join('wordAudio', audio_filename)
+
             word_object.save()
 
 
@@ -281,16 +283,18 @@ def learn_page(request):
 
 
 def saved_word_update(request, id, is_correct):
-    print("saved_word_update", id, is_correct)
+
     saved_word = get_object_or_404(SavedWord, id=id)
     if (saved_word.user!= request.user):
         raise PermissionDenied
     if is_correct:
         try:
             at = ActivityTracker.objects.get(user=saved_word.user, creation_date=timezone.now().date())
-            at.add()
+            print("found")
+            at.plus_one()
         except:
             at = ActivityTracker(user=saved_word.user)
+            print("not found")
             at.save()
 
 

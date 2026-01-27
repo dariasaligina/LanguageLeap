@@ -308,20 +308,25 @@ async function get_translation(paragraph_id, word_id){
 
             word = document.createElement("li");
             word.className = "vocabulary-item";
-            word.innerHTML = `<div class="vocabulary-header" >
-                            <span>${json.word} - ${json.translation}</span>
-                            <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
-                        </div>
-                        <div class="vocabulary-details">
-                            <p><strong>Определение:</strong> ${json.definition}</p>
-                            `;
-            if (json.synonyms && json.synonyms.length > 0) {
-                word.innerHTML += `<p><strong>Синонимы: </strong>${json.synonyms.join(', ')}</p>`;
-            }
-            if (json.antonyms && json.antonyms.length > 0) {
-                word.innerHTML += `<p><strong>Антонимы: </strong>${json.antonyms.join(', ')}</p>`;
-            }
-            word.innerHTML += `</div>`;
+            word.innerHTML = `<li class="vocabulary-item">
+    <div class="vocabulary-header">
+        <span>${json.word} - ${json.translation}</span>
+        <i class="fas fa-chevron-right vocabulary-toggle-icon"></i>
+    </div>
+    <div class="vocabulary-details">
+        <p><strong>Определение:</strong> ${json.definition}</p>
+        ${json.synonyms && json.synonyms.length > 0 ?
+            `<p><strong>Синонимы:</strong> ${json.synonyms.join(", ")}</p>` :
+            ''
+        }
+        ${json.antonyms && json.antonyms.length > 0 ?
+            `<p><strong>Антонимы:</strong> ${json.antonyms.join(", ")}</p>` :
+            ''
+        }
+    </div>
+</li>`;
+
+            console.log(word.innerHTML)
 
             vocabulary.insertBefore(word, vocabulary.firstChild);
 
