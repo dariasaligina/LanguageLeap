@@ -216,7 +216,7 @@
                 </div>
             </div>
             <div class="user-info">
-                <span><i class="fas fa-user"></i> Опубликовано: {{text.user.username}}</span>
+                <span><i class="fas fa-user"></i> Опубликовано: <a href="{% url 'leap:user_page' text.user.id %}">{{text.user.username}}</a></span>
             </div>
         </header>
         <div class="main-content">

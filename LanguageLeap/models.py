@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import Sum
+from django.utils import timezone
 
 
 class Language(models.Model):
@@ -63,9 +67,23 @@ class Text(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(max_length=500, blank=True)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', default='user.png')
     language = models.ForeignKey(Language, on_delete=models.PROTECT)
     creation_date = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def user_stats(self):
+        words_learned = KnownWord.objects.filter(user=self.user).count()
+        words_saved = SavedWord.objects.filter(user=self.user).count() + words_learned
+
+        last_week = timezone.now() - timedelta(days=7)
+        activity = ActivityTracker.objects.filter(user=self.user, creation_date__gt=last_week).aggregate(Sum("counter", default=0))
+        words_saved_last_week = SavedWord.objects.filter(user=self.user, creation_date__gt=last_week).count()
+        return {
+            'words_learned': words_learned,
+            'words_saved': words_saved,
+            'activity_count': activity['counter__sum']+words_saved_last_week
+        }
 
     def __str__(self):
         return self.user.username
@@ -141,5 +159,10 @@ class KnownWord(models.Model):
     creation_date = models.DateField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     word = models.ForeignKey(Word, on_delete=models.PROTECT)
+
+
+class Friends(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friends_as_user')
+    friend = models.ForeignKey(User, on_delete=models.CASCADE,  related_name='friends_as_friend')
 
 

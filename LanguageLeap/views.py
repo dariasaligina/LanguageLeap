@@ -22,7 +22,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mysite import settings
-from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, KnownWord
+from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, KnownWord, \
+    Friends
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from .forms import RegistrationForm, TextForm
 from gtts import gTTS
@@ -234,10 +235,6 @@ class translate_word(APIView):
                     print(f"Ошибка валидации: {e}. Повторная попытка...")
                     if attempt == 2:
                         raise
-
-
-
-
 
             word_object.word = response.word
             word_object.translation = response.translation
@@ -618,18 +615,19 @@ class api_register_user(APIView):
             )
 
 
-def get_heatmap_data(request, user_name):
+# TODO: информация о дате сохраения словах удаляется после заучивания слова-исправить
+def get_heatmap_data(request, user_id):
 
-    user = get_object_or_404(User, username=user_name)
-    saved_words_subquery = SavedWord.objects.filter(user_id=user.id).values(
+    user = get_object_or_404(User, id=user_id)
+    saved_words_subquery = SavedWord.objects.filter(user_id=user_id).values(
         'creation_date').annotate(saved_words=Count('id')).values("creation_date",'saved_words')
 
-    results = ActivityTracker.objects.filter(user_id=user.id).values('creation_date', "counter")
+    results = ActivityTracker.objects.filter(user_id=user_id).values('creation_date', "counter")
     ans = []
     for result in results:
 
         value = {"creation_date": result["creation_date"], "cards_done": result["counter"], "saved_words": 0}
-        q = saved_words_subquery.filter(creation_date = value["creation_date"])
+        q = saved_words_subquery.filter(creation_date=value["creation_date"])
         if q:
 
             value["saved_words"] = q[0]["saved_words"]
@@ -640,3 +638,63 @@ def get_heatmap_data(request, user_name):
         if not q:
             ans.append(value)
     return JsonResponse(ans, safe=0)
+
+def user_page(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    known_words = KnownWord.objects.filter(user=user).values('creation_date').annotate(num_words=Count("id")).order_by("creation_date")
+    saved_words = SavedWord.objects.filter(user=user).values('creation_date').annotate(num_words=Count("id")).order_by(
+        "creation_date")
+
+    sum = 0
+
+    known_words_response = []
+    for word in known_words:
+        sum += word['num_words']
+        known_words_response.append({'x':str(word['creation_date']), 'y':sum})
+
+    sum = 0
+    kwp = 0
+    i = 0
+
+    saved_words_response = []
+    for word in saved_words:
+        sum += word['num_words']
+        while (i < len(known_words) and known_words[i]['creation_date']<= word['creation_date']):
+            kwp += known_words[i]['num_words']
+            i+=1
+
+        saved_words_response.append({'x': str(word['creation_date']), 'y': sum+kwp})
+
+
+    friends = user.friends_as_user.all()
+
+    table = [[user.id, user.username+" 💎", user.profile.user_stats['words_learned'], user.profile.user_stats['words_saved'],user.profile.user_stats['activity_count']]]
+
+    for friend in friends:
+        table.append([friend.friend.id, friend.friend.username, friend.friend.profile.user_stats['words_learned'], friend.friend.profile.user_stats['words_saved'],friend.friend.profile.user_stats['activity_count']])
+
+    my_page = False
+    if user==request.user:
+        my_page = True
+
+    my_friend=False
+    if (request.user.is_authenticated):
+        if (Friends.objects.filter(user_id=request.user.id, friend_id=user.id)):
+            my_friend=True
+
+    return render(request, "LanguageLeap/user_page.html", {"user": user, 'known_words': known_words_response, 'saved_words': saved_words_response, 'table':table, "my_page":my_page, "my_friend": my_friend})
+
+
+@login_required
+def add_friend(request, friend_id):
+    fr =Friends(user_id= request.user.id, friend_id = friend_id)
+    fr.save()
+    return redirect('leap:user_page', friend_id)
+
+
+@login_required
+def delete_friend(request, friend_id):
+    fr = get_object_or_404(Friends, user_id= request.user.id, friend_id = friend_id)
+    fr.delete()
+
+    return redirect('leap:user_page', friend_id)

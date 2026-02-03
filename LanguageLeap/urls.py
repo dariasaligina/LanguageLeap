@@ -25,6 +25,8 @@ urlpatterns = [
          name="api_update_text_status"),
     path("api/new_text", views.api_new_text.as_view(), name= "api_new_text"),
     path("api/register", views.api_register_user.as_view(), name="api_register"),
-    path("get_heatmap_data/<slug:user_name>/", views.get_heatmap_data, name="get_heatmap_data"),
-    path("")
+    path("get_heatmap_data/<int:user_id>/", views.get_heatmap_data, name="get_heatmap_data"),
+    path("user_page/<int:user_id>", views.user_page, name="user_page"),
+    path("add_friend/<int:friend_id>", views.add_friend, name='add_friend'),
+    path("delete_friend/<int:friend_id>", views.delete_friend, name='delete_friend'),
 ]

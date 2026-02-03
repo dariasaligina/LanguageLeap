@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль Пользователя</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- v6 is also supported -->
+<script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css">
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/cal-heatmap/dist/plugins/Tooltip.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .main {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            background-color: #fff;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .profile-header img {
+
+            width: 100px;
+            height: 100px;
+            margin-right: 20px;
+        }
+        .username {
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+        .bio {
+            margin: 10px 0;
+            font-size: 1em;
+            color: #666;
+        }
+        .add-friend-button {
+            background-color: #3498db;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .statistics {
+            margin-top: 20px;
+        }
+        .stat-section {
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        .navigation-button {
+        background-color: #3498db;
+        color: #fff;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 0 5px;
+        margin-bottom: 20px;
+    }
+    </style>
+</head>
+<body>
+{% include 'LanguageLeap/header.html' %}
+<div class="main">
+    <div class="container">
+        <div class="profile-header">
+            <img src="{{user.profile.avatar.url}}" alt="Фото пользователя">
+            <div>
+                <h1 class="username">{{user.username}}</h1>
+                <p class="bio">Изучаемый язык: {{user.profile.language}}</p>
+                <p class="bio">{{user.profile.bio}}</p>
+
+                    {%if my_page%}
+                    <button class="add-friend-button">Редактировать</button>
+                    {%elif my_friend%}
+                    <a href="{%url 'leap:delete_friend' user.id%}">
+                        <button class="add-friend-button">Удалить из друзей</button>
+                    </a>
+                    {%else%}
+                <a href="{%url 'leap:add_friend' user.id%}">
+                    <button class="add-friend-button">Добавить в друзья</button>
+                </a>
+                    {%endif%}
+
+            </div>
+        </div>
+
+        <div class="statistics">
+            <div class="stat-section">
+                <h2>Активность пользователя</h2>
+                <div>
+            <button id="prevHeatmap" class="navigation-button"><i class="fas fa-arrow-left-long"></i></button>
+            <button id="nextHeatmap" class="navigation-button"><i class="fas fa-arrow-right-long"></i></button>
+        </div>
+                <div id="heatmap"><div id="cal-heatmap"></div></div> <!-- Здесь будет heatmap -->
+            </div>
+            <div class="stat-section">
+                <h2>График выученных слов</h2>
+                <canvas id="words-chart"></canvas> <!-- Здесь будет график -->
+            </div>
+            <div class="stat-section">
+                <h2>Результаты друзей</h2>
+                <div id="friend_table"></div>
+            </div>
+        </div>
+    </div>
+    </div>
+{% include 'LanguageLeap/footer.html' %}
+<script>
+
+
+
+
+    const cal = new CalHeatmap();
+
+
+
+    cal.paint({
+
+    date:{locale: 'ru',timezone: 'Europe/Moscow', highlight: [
+
+      new Date(), // Highlight today
+    ],},
+
+    domain: { type: 'month' },
+
+    subDomain: { type: 'day',radius: 2},
+
+    minDate: new Date(2025, 1),
+    maxDate: new Date(2050, 0),
+    data: { type:"json",
+            source: "{% url 'leap:get_heatmap_data' user.id%}",
+            x: d => d.creation_date,
+            y: d => d.cards_done+d.saved_words,
+            defaultValue: 0,},
+
+    scale: {
+        color: {
+
+          scheme: 'Blues',
+          type: 'linear',
+          domain: [0, 50],
+        },
+  },
+  }, [[
+      Tooltip,
+      {
+        text: function (creation_date ,value) {
+          return (
+            (creation_date ? `${new Date(creation_date).toLocaleDateString()} Повторено или добавлено слов: ${value}
+    `:"Нет данных")
+          );
+        },
+      },
+    ]]);
+
+
+document.getElementById('prevHeatmap').addEventListener('click', function () {
+        cal.previous()
+    });
+    document.getElementById('nextHeatmap').addEventListener('click', function () {
+        cal.next()
+    });
+
+
+ const ctx = document.getElementById('words-chart');
+
+ let chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        datasets: [
+            {
+                label: 'Изученные слова',
+                data: [
+                    {%for word in known_words%}
+                    { x: '{{word.x}}', y: {{word.y}} },
+                    {%endfor%}
+                ],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                fill: false,
+            },
+            {
+                label: 'Сохраненные слова',
+                data: [
+                    {%for word in saved_words%}
+                    { x: '{{word.x}}', y: {{word.y}} },
+                    {%endfor%}
+                ],
+                borderColor: 'rgba(255, 99, 132, 1)',
+                fill: false,
+            }
+        ],
+    },
+    options: {
+
+        scales: {
+            x: {
+                type: 'time',
+                time: {
+                    round:'day',
+                    minUnit:'day',
+
+                    displayFormats: {
+                        day: 'dd.MM.yyyy' // Make sure this format matches your requirements
+                    }
+                }
+            },
+            y: {
+                beginAtZero: true // Optional: starts y-axis at zero
+            }
+        }
+    }
+});
+
+
+const grid = new gridjs.Grid({
+  columns: [{name:"id", hidden:true},"Имя пользователя","Выученных слов","Сохраненных слов",   "Активность за неделю"],
+  data: [
+    {%for line in table%}
+    [{{line.0}},"{{line.1}}",{{line.2}},{{line.3}},{{line.4}}],
+    {%endfor%}
+  ],
+  sort: true,
+
+}).render(document.getElementById("friend_table"));
+grid.on('rowClick', (...args) => window.location.replace("/user_page/"+args[1]._cells[0].data.toString()));
+
+
+
+
+</script>
+</body>
+</html>
