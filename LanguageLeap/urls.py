@@ -29,4 +29,5 @@ urlpatterns = [
     path("user_page/<int:user_id>", views.user_page, name="user_page"),
     path("add_friend/<int:friend_id>", views.add_friend, name='add_friend'),
     path("delete_friend/<int:friend_id>", views.delete_friend, name='delete_friend'),
+    path("popular/", views.popular, name='popular'),
 ]

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Хит Парад Текстов</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .main-content {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .tab {
+            cursor: pointer;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #e7e7e7;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .tab:hover {
+            background-color: #d2d2d2;
+        }
+        .tabs .active {
+            background-color: #3498db;
+            color: white;
+        }
+        .text-display-section {
+            display: none;
+        }
+        .text-display-section.active {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        .text-block {
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .text-block:hover {
+            transform: translateY(-5px);
+        }
+        .text-content {
+            padding: 15px;
+            flex-grow: 1;
+        }
+        .text-content h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .text-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .language-level {
+            background-color: #e8f0fe;
+            color: #3498db;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        .text-block {
+        background-color: #fdfdfd;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease-in-out;
+        display: flex;
+        flex-direction: column;
+    }
+    .text-block:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .text-block img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-bottom: 1px solid #eee;
+    }
+    .text-content {
+        padding: 15px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .text-content h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #2c3e50;
+        font-size: 1.3em;
+    }
+    .text-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+    }
+    /* Старые стили для input[type="submit"] удалены, т.к. они были вне формы */
+    /* .input[type="submit"] и .input[type="submit"]:hover теперь применяются через .filters form input[type="submit"] */
+    .language-level {
+        background-color: #e8f0fe;
+        color: #3498db;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-weight: bold;
+    }
+    .saves {
+        display: flex;
+        align-items: center;
+        color: #7f8c8d;
+        font-size: 0.9em;
+    }
+    .saves i {
+        color: #e74c3c;
+        margin-right: 5px;
+    }
+        a {
+        text-decoration: none;
+        }
+
+    </style>
+</head>
+<body>
+{% include 'LanguageLeap/header.html' %}
+    <div class="main-content">
+        <div class="container">
+            <h1>Популярно сейчас</h1>
+            <div class="tabs">
+                <div class="tab active" onclick="showTexts('week')">За неделю</div>
+                <div class="tab" onclick="showTexts('month')">За месяц</div>
+                <div class="tab" onclick="showTexts('year')">За год</div>
+                <div class="tab" onclick="showTexts('allTime')">Все время</div>
+            </div>
+            <div class="text-display-section active" id="weekTexts">
+                <!-- Preloaded text cards for the week -->
+                {% for text in week %}
+            <a href = "{%url 'leap:text' text.id%}">
+            <div class='text-block'>
+            <img src="{{text.image.url}}" alt="{{text.name}}">
+                    <div class="text-content">
+                        <h3>{{text.name}}</h3>
+                        <div class="text-details">
+                            <span class="language-level">{{text.language_level.name}}</span>
+                            <span class="saves">
+                                <i class="fas fa-heart"></i> {{text.save_count}}
+                            </span>
+                        </div>
+                    </div></div></a>
+                    {%endfor%}
+                <!-- Repeat other text blocks similarly -->
+            </div>
+            <div class="text-display-section" id="monthTexts">
+                <!-- Preloaded text cards for the month -->
+                {% for text in month %}
+            <a href = "{%url 'leap:text' text.id%}">
+            <div class='text-block'>
+            <img src="{{text.image.url}}" alt="{{text.name}}">
+                    <div class="text-content">
+                        <h3>{{text.name}}</h3>
+                        <div class="text-details">
+                            <span class="language-level">{{text.language_level.name}}</span>
+                            <span class="saves">
+                                <i class="fas fa-heart"></i> {{text.save_count}}
+                            </span>
+                        </div>
+                    </div></div></a>
+                    {%endfor%}
+            </div>
+            <div class="text-display-section" id="yearTexts">
+                <!-- Preloaded text cards for the year -->
+                {% for text in year %}
+            <a href = "{%url 'leap:text' text.id%}">
+            <div class='text-block'>
+            <img src="{{text.image.url}}" alt="{{text.name}}">
+                    <div class="text-content">
+                        <h3>{{text.name}}</h3>
+                        <div class="text-details">
+                            <span class="language-level">{{text.language_level.name}}</span>
+                            <span class="saves">
+                                <i class="fas fa-heart"></i> {{text.save_count}}
+                            </span>
+                        </div>
+                    </div></div></a>
+                    {%endfor%}
+            </div>
+            <div class="text-display-section" id="allTimeTexts">
+                <!-- Preloaded text cards for all time -->
+                {% for text in all_time %}
+            <a href = "{%url 'leap:text' text.id%}">
+            <div class='text-block'>
+            <img src="{{text.image.url}}" alt="{{text.name}}">
+                    <div class="text-content">
+                        <h3>{{text.name}}</h3>
+                        <div class="text-details">
+                            <span class="language-level">{{text.language_level.name}}</span>
+                            <span class="saves">
+                                <i class="fas fa-heart"></i> {{text.save_count}}
+                            </span>
+                        </div>
+                    </div></div></a>
+                    {%endfor%}
+            </div>
+        </div>
+    </div>
+    {% include 'LanguageLeap/footer.html' %}
+
+    <script>
+        function showTexts(period) {
+            const sections = document.querySelectorAll('.text-display-section');
+            const tabs = document.querySelectorAll('.tab');
+
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(period + 'Texts').classList.add('active');
+            document.querySelector('.tab[onclick="showTexts(\'' + period + '\')"]').classList.add('active');
+        }
+    </script>
+</body>
+</html>

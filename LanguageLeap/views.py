@@ -698,3 +698,14 @@ def delete_friend(request, friend_id):
     fr.delete()
 
     return redirect('leap:user_page', friend_id)
+
+@login_required
+def popular(request):
+    texts = Text.objects.filter(language=request.user.profile.language, public=True)
+    all_time = sorted(texts, key=lambda t: -t.save_count)[:24]
+    year = sorted(texts, key=lambda t: (-t.saves_this_year, -t.save_count))[:24]
+    month = sorted(texts, key=lambda t: (-t.saves_this_month, -t.save_count))[:24]
+    week = sorted(texts, key=lambda t: (-t.saves_this_week, -t.save_count))[:24]
+
+
+    return render(request, "LanguageLeap/popular.html", {"all_time": all_time, "year":year, "month":month, "week":week})

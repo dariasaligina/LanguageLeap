@@ -49,15 +49,27 @@ class Text(models.Model):
     def save_count(self):
         return self.savedtext_set.count()
 
+    @property
+    def saves_this_week(self):
+        ts = timezone.now() - timedelta(days=7)
+        return self.savedtext_set.filter(save_date__gte=ts).count()
+
+    @property
+    def saves_this_month(self):
+        ts = timezone.now() - timedelta(days=30)
+        return self.savedtext_set.filter(save_date__gte=ts).count()
+
+    @property
+    def saves_this_year(self):
+        ts = timezone.now() - timedelta(days=365)
+        return self.savedtext_set.filter(save_date__gte=ts).count()
+
 
     def get_paragraph(self, paragraph_number):
-
-
         return self.split_text[paragraph_number]
 
 
     def get_word(self, paragraph_number, word_number):
-
         return self.get_paragraph(paragraph_number)[word_number]
 
     def __str__(self):
