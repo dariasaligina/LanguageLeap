@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mysite import settings
-from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, KnownWord, \
+from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, \
     Friends
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from .forms import RegistrationForm, TextForm
@@ -161,11 +161,15 @@ def upload_text(request):
             new_text.public = form.cleaned_data["public"]
             if form.cleaned_data["image"]:
                 new_text.image = form.cleaned_data["image"]
+                print("found image")
             else:
+                print("not found image")
                 new_text.image.name = "textImage/book.jpg"
             if form.cleaned_data["audio"]:
                 new_text.audio = form.cleaned_data["audio"]
+                print("found audio")
             else:
+                print("not found audio")
                 new_text.save()
                 audio_dir = os.path.join(settings.MEDIA_ROOT, 'textAudio')
                 os.makedirs(audio_dir, exist_ok=True)
@@ -187,8 +191,6 @@ class translate_word(APIView):
             word_object = Word.objects.get(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
         except Word.DoesNotExist:
             text = get_object_or_404(Text, pk=text_id)
-
-
             try:
                 word = text.get_word(paragraph,word_number)
             except:
@@ -196,17 +198,17 @@ class translate_word(APIView):
             print("new word:", word)
             word_object = Word(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
 
-
-
-
             client = genai.Client()
 
             class Responce(BaseModel):
                 word: str = Field(description="Исходное слово в начальной форме или выражение")
                 translation: str = Field(description="перевод слова или выражения на русский язык")
                 definition: str = Field(description="объяснение заначения слова на исходном языке")
+                definition_translation: str = Field(description="перевод объяснения значения на русский язык")
                 synonyms: Optional[List[str]] = Field(description="список из трех синонимов слова")
                 antonyms: Optional[List[str]] = Field(description="список из трех антонимов слова")
+                example: str = Field(description="пример использования исходного слова в предложении")
+                example_translation: str = Field(description="перевод примера использования")
 
             prompt = f"""
             ты являешься учителем иностранного языка. твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number+1} слово в абзаце): 
@@ -215,8 +217,11 @@ class translate_word(APIView):
             1.исходное слово, если слово является частью фразеологизма или другого неразрывного выражения напиши все выражение, если слово находится не в начальной форме приведи его в начальную форму
             2. перевод слова или выражения из первого пункта на русский язык с учетом контекста
             3. определение(объяснение) слова или выражение из первого пункта на исходном языке, понятное ученику
-            4. если можешь приведи список из 3 синонимов к слову или выражению из 1 пункта(синоним также может быть словом или выражением)
-            5. если можешь приведи список из 3 антонимов к слову или выражению из 1 пункта(антоним также может быть словом или выражением)
+            4. перевод определения из 3 пункта на русский язык
+            5. если можешь приведи список из 3 синонимов к слову или выражению из 1 пункта(синоним также может быть словом или выражением)
+            6. если можешь приведи список из 3 антонимов к слову или выражению из 1 пункта(антоним также может быть словом или выражением)
+            7. пример использования слова или выражения из 1 пункта в предложении (слово или выражения не обязательно должно быть в начальной форме)
+            8. перевод примера из пункта 7 на русский язык
             """
 
             for attempt in range(3):
@@ -239,8 +244,11 @@ class translate_word(APIView):
             word_object.word = response.word
             word_object.translation = response.translation
             word_object.definition = response.definition
+            word_object.definition_translation = response.definition_translation
             word_object.synonyms = response.synonyms or None
             word_object.antonyms = response.antonyms or None
+            word_object.example = response.example
+            word_object.example_translation = response.example_translation
 
             audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
             os.makedirs(audio_dir, exist_ok=True)
@@ -251,8 +259,6 @@ class translate_word(APIView):
             word_object.audio.name = os.path.join('wordAudio', audio_filename)
 
             word_object.save()
-
-
 
         saved_word = SavedWord()
         saved_word.word = word_object
@@ -267,7 +273,6 @@ class translate_word(APIView):
             "synonyms": word_object.synonyms,
             "antonyms": word_object.antonyms
         }
-
         return JsonResponse(word_data)
 
 
@@ -280,7 +285,6 @@ def learn_page(request):
 
 
 def saved_word_update(request, id, is_correct):
-
     saved_word = get_object_or_404(SavedWord, id=id)
     if (saved_word.user!= request.user):
         raise PermissionDenied
@@ -296,10 +300,10 @@ def saved_word_update(request, id, is_correct):
 
 
         if saved_word.knowledge_degree_id == 6:
-            kw = KnownWord(word=saved_word.word, user=saved_word.user)
-            kw.save()
-            saved_word.delete()
-            return JsonResponse({"saved_word": "deleted"})
+            saved_word.knowledge_degree_id = 7
+            saved_word.next_rep = None
+            saved_word.learned_date = timezone.now().date()
+
         else:
             saved_word.knowledge_degree_id += 1
             saved_word.next_rep = timezone.now() + saved_word.knowledge_degree.duration
@@ -641,47 +645,30 @@ def get_heatmap_data(request, user_id):
 
 def user_page(request, user_id):
     user = get_object_or_404(User, id=user_id)
-    known_words = KnownWord.objects.filter(user=user).values('creation_date').annotate(num_words=Count("id")).order_by("creation_date")
+    known_words = SavedWord.objects.filter(user=user, knowledge_degree__id=7).values('learned_date').annotate(num_words=Count("id")).order_by("learned_date")
     saved_words = SavedWord.objects.filter(user=user).values('creation_date').annotate(num_words=Count("id")).order_by(
         "creation_date")
-
     sum = 0
-
     known_words_response = []
     for word in known_words:
         sum += word['num_words']
-        known_words_response.append({'x':str(word['creation_date']), 'y':sum})
-
+        known_words_response.append({'x':str(word['learned_date']), 'y':sum})
     sum = 0
-    kwp = 0
-    i = 0
-
     saved_words_response = []
     for word in saved_words:
         sum += word['num_words']
-        while (i < len(known_words) and known_words[i]['creation_date']<= word['creation_date']):
-            kwp += known_words[i]['num_words']
-            i+=1
-
-        saved_words_response.append({'x': str(word['creation_date']), 'y': sum+kwp})
-
-
+        saved_words_response.append({'x': str(word['creation_date']), 'y': sum})
     friends = user.friends_as_user.all()
-
     table = [[user.id, user.username+" 💎", user.profile.user_stats['words_learned'], user.profile.user_stats['words_saved'],user.profile.user_stats['activity_count']]]
-
     for friend in friends:
         table.append([friend.friend.id, friend.friend.username, friend.friend.profile.user_stats['words_learned'], friend.friend.profile.user_stats['words_saved'],friend.friend.profile.user_stats['activity_count']])
-
     my_page = False
     if user==request.user:
         my_page = True
-
     my_friend=False
     if (request.user.is_authenticated):
         if (Friends.objects.filter(user_id=request.user.id, friend_id=user.id)):
             my_friend=True
-
     return render(request, "LanguageLeap/user_page.html", {"user": user, 'known_words': known_words_response, 'saved_words': saved_words_response, 'table':table, "my_page":my_page, "my_friend": my_friend})
 
 
@@ -706,6 +693,4 @@ def popular(request):
     year = sorted(texts, key=lambda t: (-t.saves_this_year, -t.save_count))[:24]
     month = sorted(texts, key=lambda t: (-t.saves_this_month, -t.save_count))[:24]
     week = sorted(texts, key=lambda t: (-t.saves_this_week, -t.save_count))[:24]
-
-
     return render(request, "LanguageLeap/popular.html", {"all_time": all_time, "year":year, "month":month, "week":week})

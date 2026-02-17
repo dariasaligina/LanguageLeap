@@ -79,14 +79,14 @@ class Text(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(max_length=500, blank=True)
-    avatar = models.ImageField(upload_to='avatars/', default='user.png')
+    avatar = models.ImageField(upload_to='avatars/', default='avatars/user.png')
     language = models.ForeignKey(Language, on_delete=models.PROTECT)
     creation_date = models.DateTimeField(auto_now_add=True)
 
     @property
     def user_stats(self):
-        words_learned = KnownWord.objects.filter(user=self.user).count()
-        words_saved = SavedWord.objects.filter(user=self.user).count() + words_learned
+        words_learned = SavedWord.objects.filter(user=self.user, knowledge_degree__id=7).count()
+        words_saved = SavedWord.objects.filter(user=self.user).count()
 
         last_week = timezone.now() - timedelta(days=7)
         activity = ActivityTracker.objects.filter(user=self.user, creation_date__gt=last_week).aggregate(Sum("counter", default=0))
@@ -107,8 +107,11 @@ class Word(models.Model):
 
     translation = models.CharField(max_length=256)
     definition = models.TextField()
+    definition_translation = models.TextField()
     synonyms = ArrayField(models.CharField(max_length=256), null=True)
     antonyms = ArrayField(models.CharField(max_length=256), null=True)
+    example = models.TextField()
+    example_translation = models.TextField()
 
     text = models.ForeignKey(Text, on_delete=models.PROTECT)
     paragraph = models.IntegerField()
@@ -126,8 +129,9 @@ class SavedWord(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     word = models.ForeignKey(Word, on_delete=models.PROTECT)
     knowledge_degree = models.ForeignKey(KnowledgeDegree, on_delete=models.PROTECT)
-    next_rep = models.DateTimeField()
+    next_rep = models.DateTimeField(null=True)
     creation_date = models.DateField(auto_now_add=True)
+    learned_date = models.DateTimeField(null=True)
 
     def __str__(self):
         return self.word
@@ -155,22 +159,10 @@ class ActivityTracker(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     counter = models.IntegerField(default=1)
 
-
     def plus_one(self):
         self.counter += 1
         self.save()
 
-
-class KnownWord(models.Model):
-    creation_date = models.DateField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    word = models.ForeignKey(Word, on_delete=models.PROTECT)
-
-
-class KnownWord(models.Model):
-    creation_date = models.DateField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    word = models.ForeignKey(Word, on_delete=models.PROTECT)
 
 
 class Friends(models.Model):
