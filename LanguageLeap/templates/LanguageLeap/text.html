@@ -328,7 +328,7 @@ async function get_translation(paragraph_id, word_id){
 
             console.log(word.innerHTML)
 
-            vocabulary.insertBefore(word, vocabulary.firstChild);
+            vocabulary.appendChild(word);
 
             // Vocabulary toggle functionality
 

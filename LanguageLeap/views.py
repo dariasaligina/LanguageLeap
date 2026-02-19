@@ -1,3 +1,4 @@
+import csv
 import json
 import string
 
@@ -12,7 +13,7 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.search import SearchVector
 from django.core import serializers
 from django.core.serializers import serialize
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
@@ -23,7 +24,7 @@ from rest_framework.views import APIView
 
 from mysite import settings
 from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, \
-    Friends
+    Friends, LastExport
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from .forms import RegistrationForm, TextForm
 from gtts import gTTS
@@ -37,6 +38,7 @@ from datetime import timedelta
 from google import genai
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from mistralai import Mistral
 
 
 # Create your views here.
@@ -198,48 +200,57 @@ class translate_word(APIView):
             print("new word:", word)
             word_object = Word(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
 
-            client = genai.Client()
+            #client = genai.Client()
+
+            api_key = os.environ["MISTRAL_API_KEY"]
+            model = "mistral-large-latest"
+            client = Mistral(api_key=api_key)
 
             class Responce(BaseModel):
                 word: str = Field(description="Исходное слово в начальной форме или выражение")
                 translation: str = Field(description="перевод слова или выражения на русский язык")
-                definition: str = Field(description="объяснение заначения слова на исходном языке")
+                definition: str = Field(description=f"объяснение заначения слова на исходном языке ({request.user.profile.language.name})")
                 definition_translation: str = Field(description="перевод объяснения значения на русский язык")
                 synonyms: Optional[List[str]] = Field(description="список из трех синонимов слова")
                 antonyms: Optional[List[str]] = Field(description="список из трех антонимов слова")
                 example: str = Field(description="пример использования исходного слова в предложении")
-                example_translation: str = Field(description="перевод примера использования")
+                example_translation: str = Field(description="перевод примера использования на русский")
 
             prompt = f"""
-            ты являешься учителем иностранного языка. твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number+1} слово в абзаце): 
+            ты являешься учителем иностранного языка ({request.user.profile.language.name}). твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number+1} слово в абзаце): 
             {" ".join(text.get_paragraph(paragraph))}
             в ответе выведи: 
             1.исходное слово, если слово является частью фразеологизма или другого неразрывного выражения напиши все выражение, если слово находится не в начальной форме приведи его в начальную форму
             2. перевод слова или выражения из первого пункта на русский язык с учетом контекста
-            3. определение(объяснение) слова или выражение из первого пункта на исходном языке, понятное ученику
+            3. определение(объяснение) слова или выражение из первого пункта на исходном языке ({request.user.profile.language.name}), понятное ученику
             4. перевод определения из 3 пункта на русский язык
             5. если можешь приведи список из 3 синонимов к слову или выражению из 1 пункта(синоним также может быть словом или выражением)
             6. если можешь приведи список из 3 антонимов к слову или выражению из 1 пункта(антоним также может быть словом или выражением)
             7. пример использования слова или выражения из 1 пункта в предложении (слово или выражения не обязательно должно быть в начальной форме)
             8. перевод примера из пункта 7 на русский язык
+            в ответе не используй выделений (жирный шрифт, курсив и т.д.).
             """
 
             for attempt in range(3):
-                response = client.models.generate_content(
-                    model="gemini-3-flash-preview",
-                    contents=prompt,
-                    config={
-                        "response_mime_type": "application/json",
-                        "response_json_schema": Responce.model_json_schema(),
-                    },
-                )
                 try:
-                    response = Responce.model_validate_json(response.text)
-                    break
-                except Exception as e:
-                    print(f"Ошибка валидации: {e}. Повторная попытка...")
-                    if attempt == 2:
-                        raise
+                    chat_response = client.chat.parse(
+                        model=model,
+                        messages=[
+
+                            {
+                                "role": "user",
+                                "content": prompt
+                            },
+                        ],
+                        response_format=Responce,
+
+                    )
+                    response = chat_response.choices[0].message.parsed
+
+                except:
+                    print(f"attempt {attempt+1} failed")
+
+            print(response)
 
             word_object.word = response.word
             word_object.translation = response.translation
@@ -619,7 +630,7 @@ class api_register_user(APIView):
             )
 
 
-# TODO: информация о дате сохраения словах удаляется после заучивания слова-исправить
+
 def get_heatmap_data(request, user_id):
 
     user = get_object_or_404(User, id=user_id)
@@ -694,3 +705,75 @@ def popular(request):
     month = sorted(texts, key=lambda t: (-t.saves_this_month, -t.save_count))[:24]
     week = sorted(texts, key=lambda t: (-t.saves_this_week, -t.save_count))[:24]
     return render(request, "LanguageLeap/popular.html", {"all_time": all_time, "year":year, "month":month, "week":week})
+
+@login_required
+def export(request):
+    if "rows" in request.GET:
+        rows = request.GET['rows']
+        words = SavedWord.objects.filter(user = request.user).order_by('creation_date', 'id')
+        new_last_export_size = len(words)
+        last_export = LastExport.objects.filter(user=request.user)
+        if not last_export:
+            last_export = LastExport(user=request.user)
+            last_export.save()
+        else:
+            last_export = last_export[0]
+        if rows == 'new':
+            words = words[last_export.last_export_size:]
+
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="words.csv"'},
+        )
+
+        writer = csv.writer(response, delimiter='\t')
+
+        header = []
+        if 'col_date' in request.GET:
+            header.append("Дата добавления")
+        if 'col_text_name' in request.GET:
+            header.append("Название текста")
+        if 'col_word' in request.GET:
+            header.append("Слово")
+        if 'col_translation' in request.GET:
+            header.append("Перевод")
+        if 'col_example' in request.GET:
+            header.append("Пример")
+        if 'col_example_translation' in request.GET:
+            header.append("Перевод примера")
+        if 'col_definition' in request.GET:
+            header.append("Пояснение")
+        if 'col_definition_translation' in request.GET:
+            header.append("Перевод пояснения")
+        if 'col_synonyms' in request.GET:
+            header.append("Синонимы")
+        if 'col_antonyms' in request.GET:
+            header.append("Антонимы")
+        writer.writerow(header)
+        for word in words:
+            row = []
+            if 'col_date' in request.GET:
+                row.append(word.creation_date)
+            if 'col_text_name' in request.GET:
+                row.append(word.word.text.name)
+            if 'col_word' in request.GET:
+                row.append(word.word.word)
+            if 'col_translation' in request.GET:
+                row.append(word.word.translation)
+            if 'col_example' in request.GET:
+                row.append(word.word.example)
+            if 'col_example_translation' in request.GET:
+                row.append(word.word.example_translation)
+            if 'col_definition' in request.GET:
+                row.append(word.word.definition)
+            if 'col_definition_translation' in request.GET:
+                row.append(word.word.definition_translation)
+            if 'col_synonyms' in request.GET:
+                row.append(", ".join(word.word.synonyms))
+            if 'col_antonyms' in request.GET:
+                row.append(", ".join(word.word.antonyms))
+            writer.writerow(row)
+        last_export.last_export_size = new_last_export_size
+        last_export.save()
+        return response
+    return render(request, "LanguageLeap/export.html")

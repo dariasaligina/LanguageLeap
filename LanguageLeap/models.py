@@ -170,3 +170,6 @@ class Friends(models.Model):
     friend = models.ForeignKey(User, on_delete=models.CASCADE,  related_name='friends_as_friend')
 
 
+class LastExport(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    last_export_size = models.IntegerField(default=0)
