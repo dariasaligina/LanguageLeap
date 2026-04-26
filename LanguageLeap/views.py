@@ -38,7 +38,7 @@ from datetime import timedelta
 from google import genai
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from mistralai import Mistral
+from mistralai.client import Mistral
 
 
 # Create your views here.
@@ -114,7 +114,7 @@ def user_logout(request):
 
 def filter_words(user, text_id):
 
-    saved_words = user.savedword_set.filter(word__text_id=text_id).order_by("word__word")
+    saved_words = user.savedword_set.filter(word__text_id=text_id).order_by("word__paragraph", "word__word_in_paragraph")
 
     return saved_words
 
@@ -246,11 +246,14 @@ class translate_word(APIView):
 
                     )
                     response = chat_response.choices[0].message.parsed
+                    print(f"attempt {attempt+1} succeeded")
+                    break
 
-                except:
+                except Exception as e:
                     print(f"attempt {attempt+1} failed")
+                    print(e)
 
-            print(response)
+
 
             word_object.word = response.word
             word_object.translation = response.translation

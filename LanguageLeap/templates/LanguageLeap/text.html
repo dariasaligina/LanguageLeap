@@ -199,6 +199,13 @@
 
 }
     </style>
+    <!-- Development -->
+<script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+<script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+
+<!-- Production -->
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
 </head>
 <body>
 {% include 'LanguageLeap/header.html' %}
@@ -258,6 +265,15 @@
         </div>
     </div>
 {% include 'LanguageLeap/footer.html' %}
+<script>
+
+{% for word in words%}
+    tippy('.word-{{word.word.paragraph}}-{{word.word.word_in_paragraph}}', {
+
+  content: "{{word.word}} - {{word.word.translation}}",
+});
+{% endfor %}
+</script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Save options functionality
@@ -285,8 +301,6 @@
 
 async function get_translation(paragraph_id, word_id){
 
-
-
     h = document.querySelector("head");
     st = document.createElement("style");
     st.innerHTML = `.word-${paragraph_id}-${word_id}{
@@ -297,14 +311,16 @@ async function get_translation(paragraph_id, word_id){
     h.appendChild(st);
     try {
         const response = await fetch(`/translate_word/{{text.id}}/${paragraph_id}/${word_id}`);
-
+        console.log(`/translate_word/{{text.id}}/${paragraph_id}/${word_id}`);
         if (response.ok) {
 
             let json = await response.json();
-            console.log(json.word);
-            console.log(json.meaning);
-            console.log(json.translation);
+            console.log(json);
+
             vocabulary = document.getElementsByClassName("vocabulary-list")[0];
+            console.log(`.word-${paragraph_id}-${word_id}`, `${json.word} - ${json.translation}`)
+
+            tippy(`.word-${paragraph_id}-${word_id}`, { content: `${json.word} - ${json.translation}` });
 
             word = document.createElement("li");
             word.className = "vocabulary-item";
