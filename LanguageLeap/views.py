@@ -43,9 +43,6 @@ from mistralai.client import Mistral
 
 # Create your views here.
 def catalog(request):
-    texts = Text.objects.filter(public=True)
-    if request.user.is_authenticated:
-        texts = texts.filter(language_id=request.user.profile.language_id)
     language_levels = LanguageLevel.objects.all()
     form_values = {"searchField": "",
                    "minLevel": 1,
@@ -54,12 +51,9 @@ def catalog(request):
         form_values["searchField"] = request.GET["searchField"]
         form_values["minLevel"] = int(request.GET["minLevel"])
         form_values["maxLevel"] = int(request.GET["maxLevel"])
-        if form_values['searchField']:
-            texts = texts.filter(text__icontains=form_values['searchField']) | texts.filter(
-                name__icontains=form_values['searchField'])
-        texts = texts.filter(language_level_id__gte=form_values["minLevel"],
-                             language_level_id__lte=form_values["maxLevel"])
-
+    texts = Text.catalog_filter(form_values)
+    if request.user.is_authenticated:
+        texts = texts.filter(language_id=request.user.profile.language_id)
     return render(request, "LanguageLeap/catalog.html", {
         "texts": texts,
         "language_levels": language_levels,
@@ -112,17 +106,13 @@ def user_logout(request):
     return redirect("leap:login")
 
 
-def filter_words(user, text_id):
 
-    saved_words = user.savedword_set.filter(word__text_id=text_id).order_by("word__paragraph", "word__word_in_paragraph")
-
-    return saved_words
 
 
 @login_required
 def text(request, text_id):
     text = get_object_or_404(Text, pk=text_id)
-    words = filter_words(request.user, text_id)
+    words = SavedWord.filter_words_from_text(request.user.id, text_id)
     try:
         saved_text = SavedText.objects.get(user = request.user, text= text)
         text_status = saved_text.status.id
@@ -147,6 +137,7 @@ class api_text(APIView):
         }, "text_status": text_status})
 
 
+#TODO: не добавляется аудио
 @csrf_protect
 @login_required
 def upload_text(request):
@@ -187,7 +178,6 @@ def upload_text(request):
 
 class translate_word(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request, text_id, paragraph, word_number):
         try:
             word_object = Word.objects.get(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)

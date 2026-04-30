@@ -36,6 +36,16 @@ class Text(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     modification_date = models.DateTimeField(auto_now=True)
 
+    @classmethod
+    def catalog_filter(cls, form_values):
+        texts = cls.objects.filter(public=True)
+        if form_values['searchField']:
+            texts = texts.filter(text__icontains=form_values['searchField']) | texts.filter(
+                name__icontains=form_values['searchField'])
+        texts = texts.filter(language_level_id__gte=form_values["minLevel"],
+                             language_level_id__lte=form_values["maxLevel"])
+        return texts
+
     @property
     def split_text(self):
         txt = str(self.text)
@@ -132,6 +142,12 @@ class SavedWord(models.Model):
     next_rep = models.DateTimeField(null=True)
     creation_date = models.DateField(auto_now_add=True)
     learned_date = models.DateTimeField(null=True)
+
+    @classmethod
+    def filter_words_from_text(cls, user_id, text_id):
+        saved_words = cls.objects.filter(word__text_id=text_id, user_id=user_id).order_by("word__paragraph",
+                                                                                "word__word_in_paragraph")
+        return saved_words
 
     def __str__(self):
         return self.word

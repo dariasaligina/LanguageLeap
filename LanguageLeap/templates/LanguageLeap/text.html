@@ -275,6 +275,9 @@
 {% endfor %}
 </script>
     <script>
+
+
+
         document.addEventListener('DOMContentLoaded', () => {
             // Save options functionality
             const saveButtons = document.querySelectorAll('.save-options button');
@@ -348,12 +351,15 @@ async function get_translation(paragraph_id, word_id){
 
             // Vocabulary toggle functionality
 
-            const vocabularyHeaders = document.querySelectorAll('.vocabulary-header');
+            const vocabularyHeaders = word.querySelectorAll('.vocabulary-header');
             vocabularyHeaders.forEach(header => {
-                header.addEventListener('click', () => {
-                    const item = header.closest('.vocabulary-item');
-                    item.classList.toggle('expanded');
-                });
+
+                    header.addEventListener('click', function toggle_header() {
+                        const item = header.closest('.vocabulary-item');
+                        item.classList.toggle('expanded');
+
+                    });
+
             });
 
         } else {
