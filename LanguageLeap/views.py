@@ -26,7 +26,7 @@ from mysite import settings
 from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, \
     Friends, LastExport
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
-from .forms import RegistrationForm, TextForm
+from .forms import RegistrationForm, TextForm, CatalogFilterForm
 from gtts import gTTS
 from datetime import datetime
 import os
@@ -47,13 +47,10 @@ def catalog(request):
     form_values = {"searchField": "",
                    "minLevel": 1,
                    "maxLevel": 6}
-    if request.GET:
-        form_values["searchField"] = request.GET["searchField"]
-        form_values["minLevel"] = int(request.GET["minLevel"])
-        form_values["maxLevel"] = int(request.GET["maxLevel"])
-    texts = Text.catalog_filter(form_values)
-    if request.user.is_authenticated:
-        texts = texts.filter(language_id=request.user.profile.language_id)
+    form = CatalogFilterForm(request.GET or None)
+    if form.is_valid():
+        form_values = form.cleaned_data
+    texts = Text.catalog_filter(form_values, request.user if request.user.is_authenticated else None)
     return render(request, "LanguageLeap/catalog.html", {
         "texts": texts,
         "language_levels": language_levels,
@@ -64,21 +61,12 @@ def catalog(request):
 @csrf_protect
 def user_registration(request):
     languages = Language.objects.all()
-    form = RegistrationForm()
+    form = RegistrationForm(request.POST or None)
 
-    if request.method == "POST":
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data["username"]
-            email = form.cleaned_data["email"]
-            password = form.cleaned_data["password"]
-            language = request.POST["language"]
-            user = User.objects.create_user(username, email, password)
-            user.save()
-            profile = Profile(language_id=language, user=user)
-            profile.save()
-            login(request, user)
-            return redirect("leap:my_profile")
+    if form.is_valid():
+        user = form.save()
+        login(request, user)
+        return redirect("leap:my_profile")
 
     return render(request, "LanguageLeap/registration.html", {
         "languages": languages,
@@ -104,8 +92,6 @@ def user_login(request):
 def user_logout(request):
     logout(request)
     return redirect("leap:login")
-
-
 
 
 

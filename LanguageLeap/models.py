@@ -37,11 +37,13 @@ class Text(models.Model):
     modification_date = models.DateTimeField(auto_now=True)
 
     @classmethod
-    def catalog_filter(cls, form_values):
+    def catalog_filter(cls, form_values, user):
         texts = cls.objects.filter(public=True)
         if form_values['searchField']:
             texts = texts.filter(text__icontains=form_values['searchField']) | texts.filter(
                 name__icontains=form_values['searchField'])
+        if user:
+            texts = texts.filter(language_id=user.profile.language_id)
         texts = texts.filter(language_level_id__gte=form_values["minLevel"],
                              language_level_id__lte=form_values["maxLevel"])
         return texts
