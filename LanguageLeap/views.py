@@ -1,44 +1,27 @@
 import csv
-import json
-import string
+import os
+from datetime import datetime
+from typing import List, Optional
 
-from django.core.exceptions import PermissionDenied
-from django.db.models import Count, OuterRef, Subquery
-from django.db.models.functions import Coalesce
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from django.contrib.postgres.search import SearchVector
-from django.core import serializers
-from django.core.serializers import serialize
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count
 from django.http import JsonResponse, Http404, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from django.contrib.auth import authenticate, login, logout
-from rest_framework.authtoken.models import Token
-from rest_framework.response import Response
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_protect
+from gtts import gTTS
+from mistralai.client import Mistral
+from pydantic import BaseModel, Field
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from mysite import settings
-from .models import Text, LanguageLevel, Language, Profile, Word, SavedWord, SavedText, ActivityTracker, \
-    Friends, LastExport
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from .forms import RegistrationForm, TextForm, CatalogFilterForm
-from gtts import gTTS
-from datetime import datetime
-import os
-from PyMultiDictionary import MultiDictionary
-from translate import Translator
-from nltk.stem import WordNetLemmatizer
-from django.utils import timezone
-from datetime import timedelta
-from google import genai
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from mistralai.client import Mistral
+from .models import Text, LanguageLevel, Language, Word, SavedWord, SavedText, ActivityTracker, \
+    Friends, LastExport
 
 
 # Create your views here.
@@ -108,19 +91,7 @@ def text(request, text_id):
     return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status":text_status})
 
 
-class api_text(APIView):
-    permission_classes = [IsAuthenticated]
 
-    def get(self, request, text_id):
-        text = get_object_or_404(Text, pk=text_id)
-        try:
-            saved_text = SavedText.objects.get(user = request.user, text= text)
-            text_status = saved_text.status.id
-        except:
-            text_status = 0
-        return JsonResponse({"text": {
-            "id": text.id, "name": text.name, "text": text.text, "audio": text.audio.url
-        }, "text_status": text_status})
 
 
 #TODO: не добавляется аудио
@@ -175,13 +146,9 @@ class translate_word(APIView):
                 raise Http404()
             print("new word:", word)
             word_object = Word(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
-
-            #client = genai.Client()
-
             api_key = os.environ["MISTRAL_API_KEY"]
             model = "mistral-large-latest"
             client = Mistral(api_key=api_key)
-
             class Responce(BaseModel):
                 word: str = Field(description="Исходное слово в начальной форме или выражение")
                 translation: str = Field(description="перевод слова или выражения на русский язык")
@@ -228,8 +195,6 @@ class translate_word(APIView):
                 except Exception as e:
                     print(f"attempt {attempt+1} failed")
                     print(e)
-
-
 
             word_object.word = response.word
             word_object.translation = response.translation
@@ -288,7 +253,6 @@ def saved_word_update(request, id, is_correct):
             print("not found")
             at.save()
 
-
         if saved_word.knowledge_degree_id == 6:
             saved_word.knowledge_degree_id = 7
             saved_word.next_rep = None
@@ -327,24 +291,6 @@ def delete_text(request, text_id):
     return redirect("leap:my_profile")
 
 
-class update_text_status_api(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, text_id, status):
-        try:
-            saved_text = SavedText.objects.get(user=request.user, text_id=text_id)
-            if saved_text.status.id == status:
-                saved_text.delete()
-            else:
-                saved_text.status_id = status
-                saved_text.save()
-        except:
-            saved_text = SavedText()
-            saved_text.user = request.user
-            saved_text.text_id = text_id
-            saved_text.status_id = status
-            saved_text.save()
-        return JsonResponse({"result": "done"})
 
 
 @login_required
@@ -374,292 +320,61 @@ def update_text_status(request, text_id, button_name):
     return redirect("leap:text", text_id = text_id)
 
 
-def json_catalog(request):
-    texts = Text.objects.filter(public=True)
-    if request.user.is_authenticated:
-        texts = texts.filter(language_id=request.user.profile.language_id)
-
-
-    text_list = []
-    for text in texts:
-        text_list.append({
-            "id": text.id,
-            "name":text.name,
-            "language_id": text.language.id,
-            "language_level": text.language_level.name,
-            "image": text.image.url,
-            "likes": text.save_count,
-        })
-
-
-
-    response = {
-        "texts": text_list,
-    }
-
-    return JsonResponse(response)
-
-
-@csrf_exempt
-def api_login(request):
-    errors = []
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            username = data.get("username")
-            password = data.get("password")
-        except json.JSONDecodeError:
-            return JsonResponse({'status': 'error', 'errors': ['Invalid JSON']}, status=400)
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            token, created = Token.objects.get_or_create(user=user)
-            return JsonResponse({
-                'token': token.key,
-                'userId': user.id,
-                'username': username,
-                'languageCode': user.profile.language.code
-            }, status=200)
-        else:
-            errors.append("Invalid username or password.")
-            return JsonResponse({
-                'status': 'error',
-                'errors': errors
-            }, status=400)
-    return JsonResponse({
-        'status': 'error',
-        'errors': ['Invalid request method.']
-    }, status=405)
-
-
-class api_learn_page(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        saved_words = request.user.savedword_set.filter(next_rep__lt=datetime.now())
-        all_words = request.user.savedword_set.all()
-
-        saved_words_list = []
-        for word in saved_words:
-            saved_words_list.append({
-                "id": word.word.id,
-                "saved_word_id": word.id,
-                "word": word.word.word,
-                "translation": word.word.response["translation"],
-                "audio": word.word.audio.url,
-                "knowledge": word.knowledge_degree.id,
-            })
-
-        all_words_list = []
-        for word in all_words:
-            all_words_list.append({
-                "id": word.word.id,
-                "saved_word_id": word.id,
-                "word": word.word.word,
-                "translation": word.word.response["translation"],
-                "audio": word.word.audio.url,
-                "knowledge": word.knowledge_degree.id,
-            })
-
-        return JsonResponse({"words":  saved_words_list, "all_words": all_words_list})
-
-
-class api_profile(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(self, request):
-        user = request.user
-        my_texts = Text.objects.filter(user=user)
-        my_texts_list = []
-        for text in my_texts:
-            my_texts_list.append({
-                "id": text.id,
-                "name": text.name,
-                "language_id": text.language.id,
-                "language_level": text.language_level.name,
-                "image": text.image.url,
-                "likes": text.save_count,
-            })
-        completed_texts = Text.objects.filter(savedtext__status_id=1, savedtext__user=user)
-        completed_text_list = []
-        for text in completed_texts:
-            completed_text_list.append({
-                "id": text.id,
-                "name": text.name,
-                "language_id": text.language.id,
-                "language_level": text.language_level.name,
-                "image": text.image.url,
-                "likes": text.save_count,
-            })
-
-        current_texts = Text.objects.filter(savedtext__status_id=2, savedtext__user=user)
-        current_text_list = []
-        for text in current_texts:
-            current_text_list.append({
-                "id": text.id,
-                "name": text.name,
-                "language_id": text.language.id,
-                "language_level": text.language_level.name,
-                "image": text.image.url,
-                "likes": text.save_count,
-            })
-
-        future_texts = Text.objects.filter(savedtext__status_id=3, savedtext__user=user)
-        future_text_list = []
-        for text in future_texts:
-            future_text_list.append({
-                "id": text.id,
-                "name": text.name,
-                "language_id": text.language.id,
-                "language_level": text.language_level.name,
-                "image": text.image.url,
-                "likes": text.save_count,
-            })
-        return JsonResponse({
-            "my_texts": my_texts_list,
-            "completed_texts": completed_text_list,
-            "current_texts": current_text_list,
-            "future_texts": future_text_list
-        })
-
-
-class api_new_text(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        return Response({"message": "Send a POST request to add new text content."}, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        title = request.data.get('title')
-        text_content = request.data.get('text')
-        language_name = request.data.get('language')
-        language = Language.objects.get(name=language_name)
-        level_name = request.data.get('level')
-        level = LanguageLevel.objects.get(name=level_name)
-        is_public_str = request.data.get('isPublic', 'false').lower()
-        is_public = is_public_str == 'true'
-        if not title or not text_content:
-            return Response(
-                {"error": "Title and text content are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        image_file = request.FILES.get('image_file')
-        audio_file = request.FILES.get('audio_file')
-        try:
-            new_text = Text(
-                user=request.user,
-                name=title,
-                text=text_content,
-                language=language,
-                language_level=level,
-                public=is_public,
-            )
-            if image_file:
-                new_text.image = image_file
-            else:
-                new_text.image.name = "textImage/book.jpg"
-            if audio_file:
-                new_text.audio = audio_file
-            else:
-                new_text.save()
-                audio_dir = os.path.join(settings.MEDIA_ROOT, 'textAudio')
-                os.makedirs(audio_dir, exist_ok=True)
-                audio_filename = f"{new_text.id}.mp3"
-                audio_path = os.path.join(audio_dir, audio_filename)
-                audio = gTTS(text=text_content, lang=new_text.language.code)
-                audio.save(audio_path)
-                new_text.audio.name = os.path.join('textAudio', audio_filename)
-            new_text.save()
-            return Response(
-                {"success": "Content saved successfully."},
-                status=status.HTTP_201_CREATED
-            )
-
-        except Exception as e:
-            print(str(e))
-            return Response(
-                {"error": f"An error occurred while saving: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-class api_register_user(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        return Response({"message": "Send a POST request to add new user."}, status=status.HTTP_200_OK)
-
-    def post(self, request):
-
-        try:
-            username = request.data.get("username")
-            email = request.data.get("email")
-            password = request.data.get("password")
-            language_name = request.data.get("language")
-            language = Language.objects.get(name=language_name)
-            user = User.objects.create_user(username, email, password)
-            user.save()
-            profile = Profile(language= language, user=user)
-            profile.save()
-            return Response({"message": "registration is successful"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(str(e))
-            return Response(
-                {"error": f"An error occurred while saving: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
 
 
 def get_heatmap_data(request, user_id):
-
-    user = get_object_or_404(User, id=user_id)
     saved_words_subquery = SavedWord.objects.filter(user_id=user_id).values(
-        'creation_date').annotate(saved_words=Count('id')).values("creation_date",'saved_words')
-
-    results = ActivityTracker.objects.filter(user_id=user_id).values('creation_date', "counter")
+        'creation_date').annotate(saved_words=Count('id')).values("creation_date", 'saved_words')
+    activity_tracker_subquery = ActivityTracker.objects.filter(user_id=user_id).values('creation_date', "counter")
     ans = []
-    for result in results:
-
+    for result in activity_tracker_subquery:
         value = {"creation_date": result["creation_date"], "cards_done": result["counter"], "saved_words": 0}
         q = saved_words_subquery.filter(creation_date=value["creation_date"])
         if q:
-
             value["saved_words"] = q[0]["saved_words"]
         ans.append(value)
     for result in saved_words_subquery:
         value = {"creation_date": result["creation_date"], "cards_done": 0, "saved_words": result["saved_words"]}
-        q = results.filter(creation_date=value["creation_date"])
+        q = activity_tracker_subquery.filter(creation_date=value["creation_date"])
         if not q:
             ans.append(value)
     return JsonResponse(ans, safe=0)
 
+
 def user_page(request, user_id):
     user = get_object_or_404(User, id=user_id)
-    known_words = SavedWord.objects.filter(user=user, knowledge_degree__id=7).values('learned_date').annotate(num_words=Count("id")).order_by("learned_date")
-    saved_words = SavedWord.objects.filter(user=user).values('creation_date').annotate(num_words=Count("id")).order_by(
+    known_words_counter = SavedWord.objects.filter(user=user, knowledge_degree__id=7).values('learned_date').annotate(
+        num_words=Count("id")).order_by("learned_date")
+    saved_words_counter = SavedWord.objects.filter(user=user).values('creation_date').annotate(
+        num_words=Count("id")).order_by(
         "creation_date")
     sum = 0
     known_words_response = []
-    for word in known_words:
-        sum += word['num_words']
-        known_words_response.append({'x':str(word['learned_date']), 'y':sum})
+    for date in known_words_counter:
+        sum += date['num_words']
+        known_words_response.append({'x': str(date['learned_date']), 'y': sum})
     sum = 0
     saved_words_response = []
-    for word in saved_words:
-        sum += word['num_words']
-        saved_words_response.append({'x': str(word['creation_date']), 'y': sum})
+    for date in saved_words_counter:
+        sum += date['num_words']
+        saved_words_response.append({'x': str(date['creation_date']), 'y': sum})
     friends = user.friends_as_user.all()
-    table = [[user.id, user.username+" 💎", user.profile.user_stats['words_learned'], user.profile.user_stats['words_saved'],user.profile.user_stats['activity_count']]]
+    table = [[user.id, user.username + " 💎", user.profile.user_stats['words_learned'],
+              user.profile.user_stats['words_saved'], user.profile.user_stats['activity_count']]]
     for friend in friends:
-        table.append([friend.friend.id, friend.friend.username, friend.friend.profile.user_stats['words_learned'], friend.friend.profile.user_stats['words_saved'],friend.friend.profile.user_stats['activity_count']])
+        table.append([friend.friend.id, friend.friend.username, friend.friend.profile.user_stats['words_learned'],
+                      friend.friend.profile.user_stats['words_saved'],
+                      friend.friend.profile.user_stats['activity_count']])
     my_page = False
-    if user==request.user:
+    if user == request.user:
         my_page = True
-    my_friend=False
-    if (request.user.is_authenticated):
-        if (Friends.objects.filter(user_id=request.user.id, friend_id=user.id)):
-            my_friend=True
-    return render(request, "LanguageLeap/user_page.html", {"user": user, 'known_words': known_words_response, 'saved_words': saved_words_response, 'table':table, "my_page":my_page, "my_friend": my_friend})
+    my_friend = False
+    if request.user.is_authenticated:
+        if Friends.objects.filter(user_id=request.user.id, friend_id=user.id):
+            my_friend = True
+    return render(request, "LanguageLeap/user_page.html",
+                  {"user": user, 'known_words': known_words_response, 'saved_words': saved_words_response,
+                   'table': table, "my_page": my_page, "my_friend": my_friend})
 
 
 @login_required
@@ -676,6 +391,7 @@ def delete_friend(request, friend_id):
 
     return redirect('leap:user_page', friend_id)
 
+
 @login_required
 def popular(request):
     texts = Text.objects.filter(language=request.user.profile.language, public=True)
@@ -684,6 +400,7 @@ def popular(request):
     month = sorted(texts, key=lambda t: (-t.saves_this_month, -t.save_count))[:24]
     week = sorted(texts, key=lambda t: (-t.saves_this_week, -t.save_count))[:24]
     return render(request, "LanguageLeap/popular.html", {"all_time": all_time, "year":year, "month":month, "week":week})
+
 
 @login_required
 def export(request):

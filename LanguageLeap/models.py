@@ -1,8 +1,8 @@
 from datetime import timedelta
 
+from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.contrib.auth.models import User
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -38,14 +38,13 @@ class Text(models.Model):
 
     @classmethod
     def catalog_filter(cls, form_values, user):
-        texts = cls.objects.filter(public=True)
+        texts = cls.objects.filter(public=True, language_level_id__gte=form_values["minLevel"],
+                                   language_level_id__lte=form_values["maxLevel"])
         if form_values['searchField']:
             texts = texts.filter(text__icontains=form_values['searchField']) | texts.filter(
                 name__icontains=form_values['searchField'])
         if user:
             texts = texts.filter(language_id=user.profile.language_id)
-        texts = texts.filter(language_level_id__gte=form_values["minLevel"],
-                             language_level_id__lte=form_values["maxLevel"])
         return texts
 
     @property
@@ -76,10 +75,8 @@ class Text(models.Model):
         ts = timezone.now() - timedelta(days=365)
         return self.savedtext_set.filter(save_date__gte=ts).count()
 
-
     def get_paragraph(self, paragraph_number):
         return self.split_text[paragraph_number]
-
 
     def get_word(self, paragraph_number, word_number):
         return self.get_paragraph(paragraph_number)[word_number]
