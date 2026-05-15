@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.forms import ModelForm
+
 from .models import Text, Profile, Language
 
 
@@ -51,7 +52,6 @@ class TextForm(ModelForm):
     class Meta:
         model = Text
         fields = ["name", "text", "language", "language_level", "public", "image", "audio"]
-
 
 
 class CatalogFilterForm(forms.Form):

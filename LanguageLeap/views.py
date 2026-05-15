@@ -3,8 +3,9 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count
@@ -59,17 +60,14 @@ def user_registration(request):
 
 @csrf_protect
 def user_login(request):
-    errors = []
-    if request.POST:
-        username = request.POST["username"]
-        password = request.POST["password"]
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect("leap:my_profile")
-        else:
-            errors.append("Неправильное имя или пароль")
-    return render(request, "LanguageLeap/login.html", {"errors": errors})
+    form = AuthenticationForm(request, data=request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        user = form.get_user()
+        login(request, user)
+        return redirect("leap:my_profile")
+
+    return render(request, "LanguageLeap/login.html", {"form": form})
 
 
 def user_logout(request):
@@ -77,24 +75,20 @@ def user_logout(request):
     return redirect("leap:login")
 
 
-
 @login_required
 def text(request, text_id):
     text = get_object_or_404(Text, pk=text_id)
     words = SavedWord.filter_words_from_text(request.user.id, text_id)
     try:
-        saved_text = SavedText.objects.get(user = request.user, text= text)
+        saved_text = SavedText.objects.get(user=request.user, text=text)
         text_status = saved_text.status.id
     except:
         text_status = 0
 
-    return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status":text_status})
+    return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status": text_status})
 
 
-
-
-
-#TODO: не добавляется аудио
+# TODO: не добавляется аудио
 @csrf_protect
 @login_required
 def upload_text(request):
@@ -133,15 +127,16 @@ def upload_text(request):
     return render(request, "LanguageLeap/upload_text.html", {"form": form})
 
 
-class translate_word(APIView):
+class TranslateWord(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request, text_id, paragraph, word_number):
         try:
             word_object = Word.objects.get(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
         except Word.DoesNotExist:
             text = get_object_or_404(Text, pk=text_id)
             try:
-                word = text.get_word(paragraph,word_number)
+                word = text.get_word(paragraph, word_number)
             except:
                 raise Http404()
             print("new word:", word)
@@ -149,10 +144,12 @@ class translate_word(APIView):
             api_key = os.environ["MISTRAL_API_KEY"]
             model = "mistral-large-latest"
             client = Mistral(api_key=api_key)
+
             class Responce(BaseModel):
                 word: str = Field(description="Исходное слово в начальной форме или выражение")
                 translation: str = Field(description="перевод слова или выражения на русский язык")
-                definition: str = Field(description=f"объяснение заначения слова на исходном языке ({request.user.profile.language.name})")
+                definition: str = Field(
+                    description=f"объяснение заначения слова на исходном языке ({request.user.profile.language.name})")
                 definition_translation: str = Field(description="перевод объяснения значения на русский язык")
                 synonyms: Optional[List[str]] = Field(description="список из трех синонимов слова")
                 antonyms: Optional[List[str]] = Field(description="список из трех антонимов слова")
@@ -160,7 +157,7 @@ class translate_word(APIView):
                 example_translation: str = Field(description="перевод примера использования на русский")
 
             prompt = f"""
-            ты являешься учителем иностранного языка ({request.user.profile.language.name}). твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number+1} слово в абзаце): 
+            ты являешься учителем иностранного языка ({request.user.profile.language.name}). твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number + 1} слово в абзаце): 
             {" ".join(text.get_paragraph(paragraph))}
             в ответе выведи: 
             1.исходное слово, если слово является частью фразеологизма или другого неразрывного выражения напиши все выражение, если слово находится не в начальной форме приведи его в начальную форму
@@ -189,11 +186,11 @@ class translate_word(APIView):
 
                     )
                     response = chat_response.choices[0].message.parsed
-                    print(f"attempt {attempt+1} succeeded")
+                    print(f"attempt {attempt + 1} succeeded")
                     break
 
                 except Exception as e:
-                    print(f"attempt {attempt+1} failed")
+                    print(f"attempt {attempt + 1} failed")
                     print(e)
 
             word_object.word = response.word
@@ -235,13 +232,12 @@ class translate_word(APIView):
 def learn_page(request):
     saved_words = request.user.savedword_set.filter(next_rep__lt=datetime.now())
     all_words = request.user.savedword_set.all()
+    return render(request, "LanguageLeap/learn.html", {"words": saved_words, "all_words": all_words})
 
-    return render(request, "LanguageLeap/learn.html", {"words":  saved_words, "all_words":all_words})
 
-
-def saved_word_update(request, id, is_correct):
-    saved_word = get_object_or_404(SavedWord, id=id)
-    if (saved_word.user!= request.user):
+def saved_word_update(request, saved_word_id, is_correct):
+    saved_word = get_object_or_404(SavedWord, id=saved_word_id)
+    if saved_word.user != request.user:
         raise PermissionDenied
     if is_correct:
         try:
@@ -262,7 +258,7 @@ def saved_word_update(request, id, is_correct):
             saved_word.knowledge_degree_id += 1
             saved_word.next_rep = timezone.now() + saved_word.knowledge_degree.duration
     else:
-        saved_word.knowledge_degree_id = (saved_word.knowledge_degree_id+1)//2
+        saved_word.knowledge_degree_id = (saved_word.knowledge_degree_id + 1) // 2
         saved_word.next_rep = timezone.now()
     saved_word.save()
     return JsonResponse({"saved_word": "updated"})
@@ -276,21 +272,18 @@ def my_profile(request):
     current_texts = Text.objects.filter(savedtext__status_id=2, savedtext__user=user)
     future_texts = Text.objects.filter(savedtext__status_id=3, savedtext__user=user)
     return render(request, "LanguageLeap/profile.html", {
-        "user":user,
-        "my_texts":my_texts,
+        "user": user,
+        "my_texts": my_texts,
         "completed_texts": completed_texts,
-        "current_texts":current_texts,
-        "future_texts":future_texts,
+        "current_texts": current_texts,
+        "future_texts": future_texts,
     })
-
 
 
 def delete_text(request, text_id):
     text = get_object_or_404(Text, id=text_id)
     text.delete()
     return redirect("leap:my_profile")
-
-
 
 
 @login_required
@@ -302,9 +295,9 @@ def update_text_status(request, text_id, button_name):
     elif button_name == "readBtn":
         status = 2
     else:
-         raise Http404()
+        raise Http404()
     try:
-        saved_text = SavedText.objects.get(user = request.user, text_id = text_id)
+        saved_text = SavedText.objects.get(user=request.user, text_id=text_id)
         if saved_text.status.id == status:
             saved_text.delete()
         else:
@@ -317,9 +310,7 @@ def update_text_status(request, text_id, button_name):
         saved_text.status_id = status
         saved_text.save()
 
-    return redirect("leap:text", text_id = text_id)
-
-
+    return redirect("leap:text", text_id=text_id)
 
 
 def get_heatmap_data(request, user_id):
@@ -348,16 +339,16 @@ def user_page(request, user_id):
     saved_words_counter = SavedWord.objects.filter(user=user).values('creation_date').annotate(
         num_words=Count("id")).order_by(
         "creation_date")
-    sum = 0
+    sum_words = 0
     known_words_response = []
     for date in known_words_counter:
-        sum += date['num_words']
-        known_words_response.append({'x': str(date['learned_date']), 'y': sum})
-    sum = 0
+        sum_words += date['num_words']
+        known_words_response.append({'x': str(date['learned_date']), 'y': sum_words})
+    sum_words = 0
     saved_words_response = []
     for date in saved_words_counter:
-        sum += date['num_words']
-        saved_words_response.append({'x': str(date['creation_date']), 'y': sum})
+        sum_words += date['num_words']
+        saved_words_response.append({'x': str(date['creation_date']), 'y': sum_words})
     friends = user.friends_as_user.all()
     table = [[user.id, user.username + " 💎", user.profile.user_stats['words_learned'],
               user.profile.user_stats['words_saved'], user.profile.user_stats['activity_count']]]
@@ -379,14 +370,14 @@ def user_page(request, user_id):
 
 @login_required
 def add_friend(request, friend_id):
-    fr =Friends(user_id= request.user.id, friend_id = friend_id)
+    fr = Friends(user_id=request.user.id, friend_id=friend_id)
     fr.save()
     return redirect('leap:user_page', friend_id)
 
 
 @login_required
 def delete_friend(request, friend_id):
-    fr = get_object_or_404(Friends, user_id= request.user.id, friend_id = friend_id)
+    fr = get_object_or_404(Friends, user_id=request.user.id, friend_id=friend_id)
     fr.delete()
 
     return redirect('leap:user_page', friend_id)
@@ -399,14 +390,15 @@ def popular(request):
     year = sorted(texts, key=lambda t: (-t.saves_this_year, -t.save_count))[:24]
     month = sorted(texts, key=lambda t: (-t.saves_this_month, -t.save_count))[:24]
     week = sorted(texts, key=lambda t: (-t.saves_this_week, -t.save_count))[:24]
-    return render(request, "LanguageLeap/popular.html", {"all_time": all_time, "year":year, "month":month, "week":week})
+    return render(request, "LanguageLeap/popular.html",
+                  {"all_time": all_time, "year": year, "month": month, "week": week})
 
 
 @login_required
 def export(request):
     if "rows" in request.GET:
         rows = request.GET['rows']
-        words = SavedWord.objects.filter(user = request.user).order_by('creation_date', 'id')
+        words = SavedWord.objects.filter(user=request.user).order_by('creation_date', 'id')
         new_last_export_size = len(words)
         last_export = LastExport.objects.filter(user=request.user)
         if not last_export:

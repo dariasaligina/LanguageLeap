@@ -98,12 +98,13 @@ class Profile(models.Model):
         words_saved = SavedWord.objects.filter(user=self.user).count()
 
         last_week = timezone.now() - timedelta(days=7)
-        activity = ActivityTracker.objects.filter(user=self.user, creation_date__gt=last_week).aggregate(Sum("counter", default=0))
+        activity = ActivityTracker.objects.filter(user=self.user, creation_date__gt=last_week).aggregate(
+            Sum("counter", default=0))
         words_saved_last_week = SavedWord.objects.filter(user=self.user, creation_date__gt=last_week).count()
         return {
             'words_learned': words_learned,
             'words_saved': words_saved,
-            'activity_count': activity['counter__sum']+words_saved_last_week
+            'activity_count': activity['counter__sum'] + words_saved_last_week
         }
 
     def __str__(self):
@@ -145,7 +146,7 @@ class SavedWord(models.Model):
     @classmethod
     def filter_words_from_text(cls, user_id, text_id):
         saved_words = cls.objects.filter(word__text_id=text_id, user_id=user_id).order_by("word__paragraph",
-                                                                                "word__word_in_paragraph")
+                                                                                          "word__word_in_paragraph")
         return saved_words
 
     def __str__(self):
@@ -179,10 +180,9 @@ class ActivityTracker(models.Model):
         self.save()
 
 
-
 class Friends(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friends_as_user')
-    friend = models.ForeignKey(User, on_delete=models.CASCADE,  related_name='friends_as_friend')
+    friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friends_as_friend')
 
 
 class LastExport(models.Model):
