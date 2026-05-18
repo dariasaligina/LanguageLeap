@@ -334,21 +334,10 @@ def get_heatmap_data(request, user_id):
 
 def user_page(request, user_id):
     user = get_object_or_404(User, id=user_id)
-    known_words_counter = SavedWord.objects.filter(user=user, knowledge_degree__id=7).values('learned_date').annotate(
-        num_words=Count("id")).order_by("learned_date")
-    saved_words_counter = SavedWord.objects.filter(user=user).values('creation_date').annotate(
-        num_words=Count("id")).order_by(
-        "creation_date")
-    sum_words = 0
-    known_words_response = []
-    for date in known_words_counter:
-        sum_words += date['num_words']
-        known_words_response.append({'x': str(date['learned_date']), 'y': sum_words})
-    sum_words = 0
-    saved_words_response = []
-    for date in saved_words_counter:
-        sum_words += date['num_words']
-        saved_words_response.append({'x': str(date['creation_date']), 'y': sum_words})
+
+    known_words_response = form_known_word_response(user_id)
+    saved_words_response = form_saved_word_response(user_id)
+
     friends = user.friends_as_user.all()
     table = [[user.id, user.username + " 💎", user.profile.user_stats['words_learned'],
               user.profile.user_stats['words_saved'], user.profile.user_stats['activity_count']]]
@@ -368,6 +357,26 @@ def user_page(request, user_id):
                    'table': table, "my_page": my_page, "my_friend": my_friend})
 
 
+def form_saved_word_response(user_id):
+    sum_words = 0
+    saved_words_response = []
+    saved_words_counter = SavedWord.get_saved_word_counter(user_id)
+    for date in saved_words_counter:
+        sum_words += date['num_words']
+        saved_words_response.append({'x': str(date['creation_date']), 'y': sum_words})
+    return saved_words_response
+
+
+def form_known_word_response(user_id):
+    sum_words = 0
+    known_words_response = []
+    known_words_counter = SavedWord.get_known_word_counter(user_id)
+    for date in known_words_counter:
+        sum_words += date['num_words']
+        known_words_response.append({'x': str(date['learned_date']), 'y': sum_words})
+    return known_words_response
+
+
 @login_required
 def add_friend(request, friend_id):
     fr = Friends(user_id=request.user.id, friend_id=friend_id)
@@ -379,7 +388,6 @@ def add_friend(request, friend_id):
 def delete_friend(request, friend_id):
     fr = get_object_or_404(Friends, user_id=request.user.id, friend_id=friend_id)
     fr.delete()
-
     return redirect('leap:user_page', friend_id)
 
 
@@ -396,72 +404,75 @@ def popular(request):
 
 @login_required
 def export(request):
-    if "rows" in request.GET:
-        rows = request.GET['rows']
-        words = SavedWord.objects.filter(user=request.user).order_by('creation_date', 'id')
-        new_last_export_size = len(words)
-        last_export = LastExport.objects.filter(user=request.user)
-        if not last_export:
-            last_export = LastExport(user=request.user)
-            last_export.save()
-        else:
-            last_export = last_export[0]
-        if rows == 'new':
-            words = words[last_export.last_export_size:]
+    if "rows" not in request.GET:
+        return render(request, "LanguageLeap/export.html")
 
-        response = HttpResponse(
-            content_type='text/csv',
-            headers={'Content-Disposition': 'attachment; filename="words.csv"'},
-        )
+    rows = request.GET.get('rows')
+    words = SavedWord.get_ordered_words_for_user(request.user.id)
 
-        writer = csv.writer(response, delimiter='\t')
+    new_export_size = words.count()
+    last_export, created = LastExport.objects.get_or_create(user=request.user)
+    if rows == 'new':
+        words = words[last_export.last_export_size:]
+    last_export.last_export_size = new_export_size
+    last_export.save()
 
-        header = []
-        if 'col_date' in request.GET:
-            header.append("Дата добавления")
-        if 'col_text_name' in request.GET:
-            header.append("Название текста")
-        if 'col_word' in request.GET:
-            header.append("Слово")
-        if 'col_translation' in request.GET:
-            header.append("Перевод")
-        if 'col_example' in request.GET:
-            header.append("Пример")
-        if 'col_example_translation' in request.GET:
-            header.append("Перевод примера")
-        if 'col_definition' in request.GET:
-            header.append("Пояснение")
-        if 'col_definition_translation' in request.GET:
-            header.append("Перевод пояснения")
-        if 'col_synonyms' in request.GET:
-            header.append("Синонимы")
-        if 'col_antonyms' in request.GET:
-            header.append("Антонимы")
-        writer.writerow(header)
-        for word in words:
-            row = []
-            if 'col_date' in request.GET:
-                row.append(word.creation_date)
-            if 'col_text_name' in request.GET:
-                row.append(word.word.text.name)
-            if 'col_word' in request.GET:
-                row.append(word.word.word)
-            if 'col_translation' in request.GET:
-                row.append(word.word.translation)
-            if 'col_example' in request.GET:
-                row.append(word.word.example)
-            if 'col_example_translation' in request.GET:
-                row.append(word.word.example_translation)
-            if 'col_definition' in request.GET:
-                row.append(word.word.definition)
-            if 'col_definition_translation' in request.GET:
-                row.append(word.word.definition_translation)
-            if 'col_synonyms' in request.GET:
-                row.append(", ".join(word.word.synonyms))
-            if 'col_antonyms' in request.GET:
-                row.append(", ".join(word.word.antonyms))
-            writer.writerow(row)
-        last_export.last_export_size = new_last_export_size
-        last_export.save()
-        return response
-    return render(request, "LanguageLeap/export.html")
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="words.csv"'},
+    )
+    writer = csv.writer(response, delimiter='\t')
+    writer.writerow(form_header(request.GET))
+    for word in words:
+        writer.writerow(form_row(request.GET, word))
+    return response
+
+
+def form_header(cols):
+    header = []
+    if 'col_date' in cols:
+        header.append("Дата добавления")
+    if 'col_text_name' in cols:
+        header.append("Название текста")
+    if 'col_word' in cols:
+        header.append("Слово")
+    if 'col_translation' in cols:
+        header.append("Перевод")
+    if 'col_example' in cols:
+        header.append("Пример")
+    if 'col_example_translation' in cols:
+        header.append("Перевод примера")
+    if 'col_definition' in cols:
+        header.append("Пояснение")
+    if 'col_definition_translation' in cols:
+        header.append("Перевод пояснения")
+    if 'col_synonyms' in cols:
+        header.append("Синонимы")
+    if 'col_antonyms' in cols:
+        header.append("Антонимы")
+    return header
+
+
+def form_row(cols, word):
+    row = []
+    if 'col_date' in cols:
+        row.append(word.creation_date)
+    if 'col_text_name' in cols:
+        row.append(word.word.text.name)
+    if 'col_word' in cols:
+        row.append(word.word.word)
+    if 'col_translation' in cols:
+        row.append(word.word.translation)
+    if 'col_example' in cols:
+        row.append(word.word.example)
+    if 'col_example_translation' in cols:
+        row.append(word.word.example_translation)
+    if 'col_definition' in cols:
+        row.append(word.word.definition)
+    if 'col_definition_translation' in cols:
+        row.append(word.word.definition_translation)
+    if 'col_synonyms' in cols:
+        row.append(", ".join(word.word.synonyms))
+    if 'col_antonyms' in cols:
+        row.append(", ".join(word.word.antonyms))
+    return row

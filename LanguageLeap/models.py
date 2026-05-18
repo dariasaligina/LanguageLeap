@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.utils import timezone
 
 
@@ -149,8 +149,29 @@ class SavedWord(models.Model):
                                                                                           "word__word_in_paragraph")
         return saved_words
 
+    @classmethod
+    def get_ordered_words_for_user(cls, user_id):
+        words = cls.objects.filter(
+            user_id=user_id
+        ).select_related('word', 'word__text').order_by('creation_date', 'id')
+        return words
+
     def __str__(self):
         return self.word
+
+    @classmethod
+    def get_known_word_counter(cls, user_id):
+        known_words_counter = cls.objects.filter(user_id=user_id, knowledge_degree__id=7).values(
+            'learned_date').annotate(
+            num_words=Count("id")).order_by("learned_date")
+        return known_words_counter
+
+    @classmethod
+    def get_saved_word_counter(cls, user_id):
+        saved_words_counter = SavedWord.objects.filter(user_id=user_id).values('creation_date').annotate(
+            num_words=Count("id")).order_by(
+            "creation_date")
+        return saved_words_counter
 
 
 class SavedTextStatus(models.Model):
