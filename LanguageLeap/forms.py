@@ -1,7 +1,11 @@
+import os
+
 from django import forms
 from django.contrib.auth.models import User
 from django.forms import ModelForm
+from gtts import gTTS
 
+from mysite import settings
 from .models import Text, Profile, Language
 
 
@@ -52,6 +56,39 @@ class TextForm(ModelForm):
     class Meta:
         model = Text
         fields = ["name", "text", "language", "language_level", "public", "image", "audio"]
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def save(self):
+        new_text = Text()
+        new_text.user = self.user
+        new_text.name = self.cleaned_data["name"]
+        new_text.text = self.cleaned_data["text"]
+        new_text.language = self.cleaned_data["language"]
+        new_text.language_level = self.cleaned_data["language_level"]
+        new_text.public = self.cleaned_data["public"]
+        if self.cleaned_data.get("image"):
+            new_text.image = self.cleaned_data["image"]
+        else:
+            new_text.image = "textImage/book.jpg"
+
+        if self.cleaned_data.get("audio"):
+            new_text.audio = self.cleaned_data["audio"]
+        else:
+            new_text.audio = self._generate_audio(new_text.pk, new_text.language.code)
+        new_text.save()
+        return new_text.pk
+
+    def _generate_audio(self, text_id, language_code):
+        audio_dir = os.path.join(settings.MEDIA_ROOT, 'textAudio')
+        os.makedirs(audio_dir, exist_ok=True)
+        audio_filename = f"{text_id}.mp3"
+        audio_path = os.path.join(audio_dir, audio_filename)
+        audio = gTTS(text=self.cleaned_data["text"], lang=language_code)
+        audio.save(audio_path)
+        return audio_path
 
 
 class CatalogFilterForm(forms.Form):

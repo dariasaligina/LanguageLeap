@@ -88,42 +88,13 @@ def text(request, text_id):
     return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status": text_status})
 
 
-# TODO: не добавляется аудио
 @csrf_protect
 @login_required
 def upload_text(request):
-    form = TextForm()
-    if request.method == "POST":
-        form = TextForm(request.POST)
-        if form.is_valid():
-            new_text = Text()
-            new_text.user = request.user
-            new_text.name = form.cleaned_data["name"]
-            new_text.text = form.cleaned_data["text"]
-            new_text.language = form.cleaned_data["language"]
-            new_text.language_level = form.cleaned_data["language_level"]
-            new_text.public = form.cleaned_data["public"]
-            if form.cleaned_data["image"]:
-                new_text.image = form.cleaned_data["image"]
-                print("found image")
-            else:
-                print("not found image")
-                new_text.image.name = "textImage/book.jpg"
-            if form.cleaned_data["audio"]:
-                new_text.audio = form.cleaned_data["audio"]
-                print("found audio")
-            else:
-                print("not found audio")
-                new_text.save()
-                audio_dir = os.path.join(settings.MEDIA_ROOT, 'textAudio')
-                os.makedirs(audio_dir, exist_ok=True)
-                audio_filename = f"{new_text.id}.mp3"
-                audio_path = os.path.join(audio_dir, audio_filename)
-                audio = gTTS(text=form.cleaned_data["text"], lang=new_text.language.code)
-                audio.save(audio_path)
-                new_text.audio.name = os.path.join('textAudio', audio_filename)
-            new_text.save()
-            return redirect("leap:text", text_id=new_text.pk)
+    form = TextForm(request.user, request.POST, request.FILES)
+    if form.is_valid():
+        pk = form.save()
+        return redirect("leap:text", text_id=pk)
     return render(request, "LanguageLeap/upload_text.html", {"form": form})
 
 

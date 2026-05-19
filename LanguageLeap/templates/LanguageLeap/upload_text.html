@@ -119,7 +119,7 @@
 <div class="main-content">
     <div class="form-container">
         <h2>Форма добавления текста</h2>
-        <form method = "post">
+        <form enctype="multipart/form-data" method="post">
             {%csrf_token%}
             {{form.non_field_errors}}
             <div class="form-group">
