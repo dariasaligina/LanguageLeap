@@ -1,12 +1,14 @@
+import csv
 import os
 
 from django import forms
 from django.contrib.auth.models import User
 from django.forms import ModelForm
+from django.http import HttpResponse
 from gtts import gTTS
 
 from mysite import settings
-from .models import Text, Profile, Language
+from .models import Text, Profile, Language, SavedWord, LastExport
 
 
 class RegistrationForm(forms.Form):
@@ -95,3 +97,133 @@ class CatalogFilterForm(forms.Form):
     searchField = forms.CharField(required=False, initial="")
     minLevel = forms.IntegerField(initial=1, min_value=1, max_value=6)
     maxLevel = forms.IntegerField(initial=6, min_value=1, max_value=6)
+
+
+class ExportForm(forms.Form):
+    """Форма для экспорта слов с выбором колонок"""
+
+    # Поля для выбора колонок
+    col_date = forms.BooleanField(
+        required=False,
+        label="Дата добавления",
+        initial=True
+    )
+    col_text_name = forms.BooleanField(
+        required=False,
+        label="Название текста",
+        initial=True
+    )
+    col_word = forms.BooleanField(
+        required=False,
+        label="Слово",
+        initial=True
+    )
+    col_translation = forms.BooleanField(
+        required=False,
+        label="Перевод",
+        initial=True
+    )
+    col_example = forms.BooleanField(
+        required=False,
+        label="Пример",
+        initial=False
+    )
+    col_example_translation = forms.BooleanField(
+        required=False,
+        label="Перевод примера",
+        initial=False
+    )
+    col_definition = forms.BooleanField(
+        required=False,
+        label="Пояснение",
+        initial=False
+    )
+    col_definition_translation = forms.BooleanField(
+        required=False,
+        label="Перевод пояснения",
+        initial=False
+    )
+    col_synonyms = forms.BooleanField(
+        required=False,
+        label="Синонимы",
+        initial=False
+    )
+    col_antonyms = forms.BooleanField(
+        required=False,
+        label="Антонимы",
+        initial=False
+    )
+
+    EXPORT_CHOICES = [
+        ('all', 'Все слова'),
+        ('new', 'Только новые слова'),
+    ]
+    rows = forms.ChoiceField(
+        choices=EXPORT_CHOICES,
+        widget=forms.RadioSelect,
+        initial='all',
+        label="Экспортировать",
+
+    )
+
+    def get_header(self):
+        """Возвращает заголовок CSV на основе выбранных полей"""
+        header = []
+        field_labels = {
+            'col_date': "Дата добавления",
+            'col_text_name': "Название текста",
+            'col_word': "Слово",
+            'col_translation': "Перевод",
+            'col_example': "Пример",
+            'col_example_translation': "Перевод примера",
+            'col_definition': "Пояснение",
+            'col_definition_translation': "Перевод пояснения",
+            'col_synonyms': "Синонимы",
+            'col_antonyms': "Антонимы",
+        }
+        for field_name, label in field_labels.items():
+            if self.cleaned_data.get(field_name):
+                header.append(label)
+
+        return header
+
+    def get_row_data(self, word):
+        """Возвращает строку данных для конкретного слова"""
+        row = []
+        field_mapping = {
+            'col_date': lambda w: w.creation_date,
+            'col_text_name': lambda w: w.word.text.name,
+            'col_word': lambda w: w.word.word,
+            'col_translation': lambda w: w.word.translation,
+            'col_example': lambda w: w.word.example,
+            'col_example_translation': lambda w: w.word.example_translation,
+            'col_definition': lambda w: w.word.definition,
+            'col_definition_translation': lambda w: w.word.definition_translation,
+            'col_synonyms': lambda w: ", ".join(w.word.synonyms) if w.word.synonyms else "",
+            'col_antonyms': lambda w: ", ".join(w.word.antonyms) if w.word.antonyms else "",
+        }
+        for field_name, getter in field_mapping.items():
+            if self.cleaned_data.get(field_name):
+                row.append(getter(word))
+
+        return row
+
+    def export_to_csv(self, user):
+        """Выполняет экспорт и возвращает HttpResponse"""
+        words = SavedWord.get_ordered_words_for_user(user.id)
+        rows_type = self.cleaned_data['rows']
+        last_export, created = LastExport.objects.get_or_create(user=user)
+        if rows_type == 'new':
+            words = words[last_export.last_export_size:]
+        new_export_size = words.count()
+        last_export.last_export_size = new_export_size
+        last_export.save()
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="words.csv"'},
+        )
+        writer = csv.writer(response, delimiter='\t')
+        writer.writerow(self.get_header())
+        for word in words:
+            writer.writerow(self.get_row_data(word))
+        return response

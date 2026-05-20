@@ -1,4 +1,3 @@
-import csv
 import os
 from datetime import datetime
 from typing import List, Optional
@@ -9,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count
-from django.http import JsonResponse, Http404, HttpResponse
+from django.http import JsonResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
@@ -20,9 +19,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from mysite import settings
-from .forms import RegistrationForm, TextForm, CatalogFilterForm
+from .forms import RegistrationForm, TextForm, CatalogFilterForm, ExportForm
 from .models import Text, LanguageLevel, Language, Word, SavedWord, SavedText, ActivityTracker, \
-    Friends, LastExport
+    Friends
 
 
 # Create your views here.
@@ -213,11 +212,9 @@ def saved_word_update(request, saved_word_id, is_correct):
     if is_correct:
         try:
             at = ActivityTracker.objects.get(user=saved_word.user, creation_date=timezone.now().date())
-            print("found")
             at.plus_one()
         except:
             at = ActivityTracker(user=saved_word.user)
-            print("not found")
             at.save()
 
         if saved_word.knowledge_degree_id == 6:
@@ -280,7 +277,6 @@ def update_text_status(request, text_id, button_name):
         saved_text.text_id = text_id
         saved_text.status_id = status
         saved_text.save()
-
     return redirect("leap:text", text_id=text_id)
 
 
@@ -305,19 +301,11 @@ def get_heatmap_data(request, user_id):
 
 def user_page(request, user_id):
     user = get_object_or_404(User, id=user_id)
-
     known_words_response = form_known_word_response(user_id)
     saved_words_response = form_saved_word_response(user_id)
-
-    friends = user.friends_as_user.all()
-    table = [[user.id, user.username + " 💎", user.profile.user_stats['words_learned'],
-              user.profile.user_stats['words_saved'], user.profile.user_stats['activity_count']]]
-    for friend in friends:
-        table.append([friend.friend.id, friend.friend.username, friend.friend.profile.user_stats['words_learned'],
-                      friend.friend.profile.user_stats['words_saved'],
-                      friend.friend.profile.user_stats['activity_count']])
+    table = form_friend_table(user)
     my_page = False
-    if user == request.user:
+    if user_id == request.user.id:
         my_page = True
     my_friend = False
     if request.user.is_authenticated:
@@ -326,6 +314,17 @@ def user_page(request, user_id):
     return render(request, "LanguageLeap/user_page.html",
                   {"user": user, 'known_words': known_words_response, 'saved_words': saved_words_response,
                    'table': table, "my_page": my_page, "my_friend": my_friend})
+
+
+def form_friend_table(user):
+    friends = user.friends_as_user.all()
+    table = [[user.id, user.username + " 💎", user.profile.user_stats['words_learned'],
+              user.profile.user_stats['words_saved'], user.profile.user_stats['activity_count']]]
+    for friend in friends:
+        table.append([friend.friend.id, friend.friend.username, friend.friend.profile.user_stats['words_learned'],
+                      friend.friend.profile.user_stats['words_saved'],
+                      friend.friend.profile.user_stats['activity_count']])
+    return table
 
 
 def form_saved_word_response(user_id):
@@ -375,75 +374,9 @@ def popular(request):
 
 @login_required
 def export(request):
-    if "rows" not in request.GET:
-        return render(request, "LanguageLeap/export.html")
-
-    rows = request.GET.get('rows')
-    words = SavedWord.get_ordered_words_for_user(request.user.id)
-
-    new_export_size = words.count()
-    last_export, created = LastExport.objects.get_or_create(user=request.user)
-    if rows == 'new':
-        words = words[last_export.last_export_size:]
-    last_export.last_export_size = new_export_size
-    last_export.save()
-
-    response = HttpResponse(
-        content_type='text/csv',
-        headers={'Content-Disposition': 'attachment; filename="words.csv"'},
-    )
-    writer = csv.writer(response, delimiter='\t')
-    writer.writerow(form_header(request.GET))
-    for word in words:
-        writer.writerow(form_row(request.GET, word))
-    return response
-
-
-def form_header(cols):
-    header = []
-    if 'col_date' in cols:
-        header.append("Дата добавления")
-    if 'col_text_name' in cols:
-        header.append("Название текста")
-    if 'col_word' in cols:
-        header.append("Слово")
-    if 'col_translation' in cols:
-        header.append("Перевод")
-    if 'col_example' in cols:
-        header.append("Пример")
-    if 'col_example_translation' in cols:
-        header.append("Перевод примера")
-    if 'col_definition' in cols:
-        header.append("Пояснение")
-    if 'col_definition_translation' in cols:
-        header.append("Перевод пояснения")
-    if 'col_synonyms' in cols:
-        header.append("Синонимы")
-    if 'col_antonyms' in cols:
-        header.append("Антонимы")
-    return header
-
-
-def form_row(cols, word):
-    row = []
-    if 'col_date' in cols:
-        row.append(word.creation_date)
-    if 'col_text_name' in cols:
-        row.append(word.word.text.name)
-    if 'col_word' in cols:
-        row.append(word.word.word)
-    if 'col_translation' in cols:
-        row.append(word.word.translation)
-    if 'col_example' in cols:
-        row.append(word.word.example)
-    if 'col_example_translation' in cols:
-        row.append(word.word.example_translation)
-    if 'col_definition' in cols:
-        row.append(word.word.definition)
-    if 'col_definition_translation' in cols:
-        row.append(word.word.definition_translation)
-    if 'col_synonyms' in cols:
-        row.append(", ".join(word.word.synonyms))
-    if 'col_antonyms' in cols:
-        row.append(", ".join(word.word.antonyms))
-    return row
+    if request.method == 'POST':
+        form = ExportForm(request.POST)
+        if form.is_valid():
+            return form.export_to_csv(request.user)
+        return render(request, "LanguageLeap/export.html", {'form': form})
+    return render(request, "LanguageLeap/export.html", {'form': ExportForm()})
