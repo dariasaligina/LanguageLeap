@@ -1,6 +1,4 @@
-import os
 from datetime import datetime
-from typing import List, Optional
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -12,13 +10,9 @@ from django.http import JsonResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
-from gtts import gTTS
-from mistralai.client import Mistral
-from pydantic import BaseModel, Field
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from mysite import settings
 from .forms import RegistrationForm, TextForm, CatalogFilterForm, ExportForm
 from .models import Text, LanguageLevel, Language, Word, SavedWord, SavedText, ActivityTracker, \
     Friends
@@ -81,7 +75,7 @@ def text(request, text_id):
     try:
         saved_text = SavedText.objects.get(user=request.user, text=text)
         text_status = saved_text.status.id
-    except:
+    except SavedText.DoesNotExist:
         text_status = 0
 
     return render(request, "LanguageLeap/text.html", {"text": text, "words": words, "text_status": text_status})
@@ -104,89 +98,13 @@ class TranslateWord(APIView):
         try:
             word_object = Word.objects.get(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
         except Word.DoesNotExist:
-            text = get_object_or_404(Text, pk=text_id)
             try:
-                word = text.get_word(paragraph, word_number)
-            except:
+                word_object = Word().init_by_api(text_id, paragraph, word_number)
+            except (IndexError, Text.DoesNotExist):
                 raise Http404()
-            print("new word:", word)
-            word_object = Word(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
-            api_key = os.environ["MISTRAL_API_KEY"]
-            model = "mistral-large-latest"
-            client = Mistral(api_key=api_key)
-
-            class Responce(BaseModel):
-                word: str = Field(description="Исходное слово в начальной форме или выражение")
-                translation: str = Field(description="перевод слова или выражения на русский язык")
-                definition: str = Field(
-                    description=f"объяснение заначения слова на исходном языке ({request.user.profile.language.name})")
-                definition_translation: str = Field(description="перевод объяснения значения на русский язык")
-                synonyms: Optional[List[str]] = Field(description="список из трех синонимов слова")
-                antonyms: Optional[List[str]] = Field(description="список из трех антонимов слова")
-                example: str = Field(description="пример использования исходного слова в предложении")
-                example_translation: str = Field(description="перевод примера использования на русский")
-
-            prompt = f"""
-            ты являешься учителем иностранного языка ({request.user.profile.language.name}). твоя задача объяснить ученику значение слова {word} в контексте (слово {word} - {word_number + 1} слово в абзаце): 
-            {" ".join(text.get_paragraph(paragraph))}
-            в ответе выведи: 
-            1.исходное слово, если слово является частью фразеологизма или другого неразрывного выражения напиши все выражение, если слово находится не в начальной форме приведи его в начальную форму
-            2. перевод слова или выражения из первого пункта на русский язык с учетом контекста
-            3. определение(объяснение) слова или выражение из первого пункта на исходном языке ({request.user.profile.language.name}), понятное ученику
-            4. перевод определения из 3 пункта на русский язык
-            5. если можешь приведи список из 3 синонимов к слову или выражению из 1 пункта(синоним также может быть словом или выражением)
-            6. если можешь приведи список из 3 антонимов к слову или выражению из 1 пункта(антоним также может быть словом или выражением)
-            7. пример использования слова или выражения из 1 пункта в предложении (слово или выражения не обязательно должно быть в начальной форме)
-            8. перевод примера из пункта 7 на русский язык
-            в ответе не используй выделений (жирный шрифт, курсив и т.д.).
-            """
-
-            for attempt in range(3):
-                try:
-                    chat_response = client.chat.parse(
-                        model=model,
-                        messages=[
-
-                            {
-                                "role": "user",
-                                "content": prompt
-                            },
-                        ],
-                        response_format=Responce,
-
-                    )
-                    response = chat_response.choices[0].message.parsed
-                    print(f"attempt {attempt + 1} succeeded")
-                    break
-
-                except Exception as e:
-                    print(f"attempt {attempt + 1} failed")
-                    print(e)
-
-            word_object.word = response.word
-            word_object.translation = response.translation
-            word_object.definition = response.definition
-            word_object.definition_translation = response.definition_translation
-            word_object.synonyms = response.synonyms or None
-            word_object.antonyms = response.antonyms or None
-            word_object.example = response.example
-            word_object.example_translation = response.example_translation
-
-            audio_dir = os.path.join(settings.MEDIA_ROOT, 'wordAudio')
-            os.makedirs(audio_dir, exist_ok=True)
-            audio_filename = f"{word_object.text.id}-{word_object.paragraph}-{word_object.word_in_paragraph}.mp3"
-            audio_path = os.path.join(audio_dir, audio_filename)
-            audio = gTTS(text=word_object.word, lang=text.language.code)
-            audio.save(audio_path)
-            word_object.audio.name = os.path.join('wordAudio', audio_filename)
-
             word_object.save()
 
-        saved_word = SavedWord()
-        saved_word.word = word_object
-        saved_word.user = request.user
-        saved_word.knowledge_degree_id = 1
-        saved_word.next_rep = datetime.now()
+        saved_word = SavedWord(word=word_object, user=request.user)
         saved_word.save()
         word_data = {
             "word": word_object.word,
@@ -213,21 +131,12 @@ def saved_word_update(request, saved_word_id, is_correct):
         try:
             at = ActivityTracker.objects.get(user=saved_word.user, creation_date=timezone.now().date())
             at.plus_one()
-        except:
+        except ActivityTracker.DoesNotExist:
             at = ActivityTracker(user=saved_word.user)
-            at.save()
-
-        if saved_word.knowledge_degree_id == 6:
-            saved_word.knowledge_degree_id = 7
-            saved_word.next_rep = None
-            saved_word.learned_date = timezone.now().date()
-
-        else:
-            saved_word.knowledge_degree_id += 1
-            saved_word.next_rep = timezone.now() + saved_word.knowledge_degree.duration
+        at.save()
+        saved_word.correct_answer()
     else:
-        saved_word.knowledge_degree_id = (saved_word.knowledge_degree_id + 1) // 2
-        saved_word.next_rep = timezone.now()
+        saved_word.wrong_answer()
     saved_word.save()
     return JsonResponse({"saved_word": "updated"})
 
@@ -271,11 +180,8 @@ def update_text_status(request, text_id, button_name):
         else:
             saved_text.status_id = status
             saved_text.save()
-    except:
-        saved_text = SavedText()
-        saved_text.user = request.user
-        saved_text.text_id = text_id
-        saved_text.status_id = status
+    except SavedText.DoesNotExist:
+        saved_text = SavedText(user=request.user, text_id=text_id, status_id=status)
         saved_text.save()
     return redirect("leap:text", text_id=text_id)
 
