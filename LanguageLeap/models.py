@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import os
 from datetime import timedelta
 from typing import List, Optional
@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import Sum, Count
 from django.utils import timezone
 from gtts import gTTS
-from mistralai import Mistral
+from mistralai.client import Mistral
 from pydantic import BaseModel, Field
 
 from mysite import settings

@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import JsonResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
@@ -28,8 +29,11 @@ def catalog(request):
     if form.is_valid():
         form_values = form.cleaned_data
     texts = Text.catalog_filter(form_values, request.user if request.user.is_authenticated else None)
+    paginator = Paginator(texts, 12)
+    page_number = request.GET.get('page')
+    page_texts = paginator.get_page(page_number)
     return render(request, "LanguageLeap/catalog.html", {
-        "texts": texts,
+        "texts": page_texts,
         "language_levels": language_levels,
         "form_values": form_values,
     })

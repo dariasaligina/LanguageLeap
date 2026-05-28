@@ -170,9 +170,67 @@
     a{
     text-decoration: none;
     }
+    /* Стили для пагинации */
+.pagination {
+    margin-top: 40px;
+    text-align: center;
+    padding: 20px 0;
+    border-top: 1px solid #eee;
+}
+
+.step-links {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.step-links a {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #f8f9fa;
+    color: #3498db;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.step-links a:hover {
+    background-color: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.step-links .current {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 0 5px;
+}
+
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    .step-links {
+        gap: 8px;
+    }
+
+    .step-links a,
+    .step-links .current {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
     </style>
 </head>
 <body>
+{% load pagination_tags %}
 {% include 'LanguageLeap/header.html' %}
 <div class="main-content">
     <div class="container">
@@ -219,6 +277,25 @@
                     </div></div></a>
                     {%endfor%}
         </div>
+        <!-- Блок навигации -->
+<div class="pagination">
+    <span class="step-links">
+        {% if texts.has_previous %}
+            <!-- Изменяем ссылки с использованием нашего тега -->
+            <a href="?{% param_replace page=1 %}">&laquo; Первая</a>
+            <a href="?{% param_replace page=texts.previous_page_number %}">Назад</a>
+        {% endif %}
+
+        <span class="current">
+            Страница {{ texts.number }} из {{ texts.paginator.num_pages }}
+        </span>
+
+        {% if texts.has_next %}
+            <a href="?{% param_replace page=texts.next_page_number %}">Вперед</a>
+            <a href="?{% param_replace page=texts.paginator.num_pages %}">Последняя &raquo;</a>
+        {% endif %}
+    </span>
+</div>
     </div>
 </div>
 {% include 'LanguageLeap/footer.html' %}
