@@ -23,4 +23,5 @@ urlpatterns = [
     path("delete_friend/<int:friend_id>", views.delete_friend, name='delete_friend'),
     path("popular/", views.popular, name='popular'),
     path("export/", views.export, name="export"),
+    path("", views.index, name='index'),
 ]

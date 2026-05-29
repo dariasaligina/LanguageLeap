@@ -19,6 +19,12 @@ from .models import Text, LanguageLevel, Language, Word, SavedWord, SavedText, A
     Friends
 
 
+def index(request):
+    if (request.user.is_authenticated):
+        return redirect("leap:my_profile")
+    return redirect("leap:login")
+
+
 # Create your views here.
 def catalog(request):
     language_levels = LanguageLevel.objects.all()
