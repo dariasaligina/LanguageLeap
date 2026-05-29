@@ -157,6 +157,7 @@
 </head>
 
 <body>
+{% load filters %}
 {% include 'LanguageLeap/header.html' %}
 <div class="main-content">
     <div class="container">
@@ -181,7 +182,7 @@
                     <div class="text-block">
                         <a href="{%url 'leap:text' text.id %}"><img src="{{text.image.url}}" alt="{{text.name}}"></a>
                         <div class="text-content">
-                            <a href="{%url 'leap:text' text.id %}"><h3>{{text.name}}</h3></a>
+                            <a href="{%url 'leap:text' text.id %}"><h3>{{text.name|set_len:60}} </h3></a>
                             <div class="text-details">
                                 <span class="language-level">{{text.language_level.name}}</span>
                                 <button class="delete-text-button" data-text-name="{{text.name}}" data-text-id="{{text.id}}">Удалить</button>

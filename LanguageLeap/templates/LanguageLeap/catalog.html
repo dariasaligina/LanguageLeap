@@ -231,6 +231,7 @@
 </head>
 <body>
 {% load pagination_tags %}
+{% load filters %}
 {% include 'LanguageLeap/header.html' %}
 <div class="main-content">
     <div class="container">
@@ -267,7 +268,7 @@
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
                     <div class="text-content">
-                        <h3>{{text.name}}</h3>
+                        <h3 > {{text.name|set_len:40}} </h3>
                         <div class="text-details">
                             <span class="language-level">{{text.language_level.name}}</span>
                             <span class="saves">

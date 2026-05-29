@@ -155,8 +155,9 @@
     </style>
 </head>
 <body>
+{% load filters %}
 {% include 'LanguageLeap/header.html' %}
-    <div class="main-content">
+<div class="main-content">
         <div class="container">
             <h1>Популярно сейчас</h1>
             <div class="tabs">
@@ -172,7 +173,7 @@
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
                     <div class="text-content">
-                        <h3>{{text.name}}</h3>
+                        <h3>{{text.name|set_len:55}}</h3>
                         <div class="text-details">
                             <span class="language-level">{{text.language_level.name}}</span>
                             <span class="saves">
@@ -190,7 +191,7 @@
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
                     <div class="text-content">
-                        <h3>{{text.name}}</h3>
+                        <h3>{{text.name|set_len:55}}</h3>
                         <div class="text-details">
                             <span class="language-level">{{text.language_level.name}}</span>
                             <span class="saves">
@@ -207,7 +208,7 @@
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
                     <div class="text-content">
-                        <h3>{{text.name}}</h3>
+                        <h3>{{text.name|set_len:55}}</h3>
                         <div class="text-details">
                             <span class="language-level">{{text.language_level.name}}</span>
                             <span class="saves">
@@ -224,7 +225,7 @@
             <div class='text-block'>
             <img src="{{text.image.url}}" alt="{{text.name}}">
                     <div class="text-content">
-                        <h3>{{text.name}}</h3>
+                        <h3>{{text.name|set_len:55}}</h3>
                         <div class="text-details">
                             <span class="language-level">{{text.language_level.name}}</span>
                             <span class="saves">
