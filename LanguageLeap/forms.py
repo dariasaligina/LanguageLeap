@@ -213,9 +213,9 @@ class ExportForm(forms.Form):
         words = SavedWord.get_ordered_words_for_user(user.id)
         rows_type = self.cleaned_data['rows']
         last_export, created = LastExport.objects.get_or_create(user=user)
+        new_export_size = words.count()
         if rows_type == 'new':
             words = words[last_export.last_export_size:]
-        new_export_size = words.count()
         last_export.last_export_size = new_export_size
         last_export.save()
         response = HttpResponse(
@@ -227,3 +227,27 @@ class ExportForm(forms.Form):
         for word in words:
             writer.writerow(self.get_row_data(word))
         return response
+
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        # Поля, доступные для редактирования пользователем
+        fields = ['bio', 'avatar', 'language']
+        # Опционально: настройка виджетов и подписей
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Расскажите о себе...'}),
+            'language': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'bio': 'О себе',
+            'avatar': 'Аватар',
+            'language': 'Язык',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Делаем поле avatar необязательным, чтобы пользователь мог не менять аватар
+        self.fields['avatar'].required = False
+        # При необходимости добавить дополнительные атрибуты CSS
+        self.fields['bio'].widget.attrs.update({'class': 'form-control'})

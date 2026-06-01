@@ -1,5 +1,5 @@
-from datetime import datetime
 import os
+from datetime import datetime
 from datetime import timedelta
 from typing import List, Optional
 
@@ -212,7 +212,7 @@ class Word(models.Model):
         os.makedirs(audio_dir, exist_ok=True)
         audio_filename = f"{self.text.id}-{self.paragraph}-{self.word_in_paragraph}.mp3"
         audio_path = os.path.join(audio_dir, audio_filename)
-        audio = gTTS(text=self.word, lang=self.language.code)
+        audio = gTTS(text=self.word, lang=self.text.language.code)
         audio.save(audio_path)
         self.audio.name = os.path.join('wordAudio', audio_filename)
 

@@ -14,13 +14,13 @@ from django.views.decorators.csrf import csrf_protect
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from .forms import RegistrationForm, TextForm, CatalogFilterForm, ExportForm
+from .forms import RegistrationForm, TextForm, CatalogFilterForm, ExportForm, ProfileForm
 from .models import Text, LanguageLevel, Language, Word, SavedWord, SavedText, ActivityTracker, \
     Friends
 
 
 def index(request):
-    if (request.user.is_authenticated):
+    if request.user.is_authenticated:
         return redirect("leap:my_profile")
     return redirect("leap:login")
 
@@ -109,7 +109,8 @@ class TranslateWord(APIView):
             word_object = Word.objects.get(text_id=text_id, paragraph=paragraph, word_in_paragraph=word_number)
         except Word.DoesNotExist:
             try:
-                word_object = Word().init_by_api(text_id, paragraph, word_number)
+                word_object = Word()
+                word_object.init_by_api(text_id, paragraph, word_number)
             except (IndexError, Text.DoesNotExist):
                 raise Http404()
             word_object.save()
@@ -134,7 +135,7 @@ def learn_page(request):
 
 
 def saved_word_update(request, saved_word_id, is_correct):
-    saved_word = get_object_or_404(SavedWord, id=saved_word_id)
+    saved_word = get_object_or_404(SavedWord, pk=saved_word_id)
     if saved_word.user != request.user:
         raise PermissionDenied
     if is_correct:
@@ -296,3 +297,16 @@ def export(request):
             return form.export_to_csv(request.user)
         return render(request, "LanguageLeap/export.html", {'form': form})
     return render(request, "LanguageLeap/export.html", {'form': ExportForm()})
+
+
+@login_required
+def edit_profile(request):
+    profile = request.user.profile
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect("leap:user_page", request.user.id)
+    else:
+        form = ProfileForm(instance=profile)
+    return render(request, 'LanguageLeap/edit_profile.html', {'form': form})

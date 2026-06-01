@@ -13,7 +13,7 @@ urlpatterns = [
     path("translate_word/<int:text_id>/<int:paragraph>/<int:word_number>", views.TranslateWord.as_view(),
          name="translate_word"),
     path("learn/", views.learn_page, name='learn'),
-    path("saved_word_update/<int:id>/<int:is_correct>", views.saved_word_update, name="saved_word_update"),
+    path("saved_word_update/<int:saved_word_id>/<int:is_correct>", views.saved_word_update, name="saved_word_update"),
     path("saves", views.my_profile, name="my_profile"),
     path("delete_text/<int:text_id>/", views.delete_text, name="delete_text"),
     path("update_text_status/<int:text_id>/<slug:button_name>", views.update_text_status, name="update_text_status"),
@@ -24,4 +24,5 @@ urlpatterns = [
     path("popular/", views.popular, name='popular'),
     path("export/", views.export, name="export"),
     path("", views.index, name='index'),
+    path("edit_user_page", views.edit_profile, name="edit_user_page"),
 ]

@@ -84,6 +84,16 @@
         margin: 0 5px;
         margin-bottom: 20px;
     }
+    .profile-header img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #007bff;
+    margin-right: 20px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
     </style>
 </head>
 <body>
@@ -98,7 +108,9 @@
                 <p class="bio">{{user.profile.bio}}</p>
 
                     {%if my_page%}
+                <a href="{%url 'leap:edit_user_page' %}">
                     <button class="add-friend-button">Редактировать</button>
+                </a>
                     {%elif my_friend%}
                     <a href="{%url 'leap:delete_friend' user.id%}">
                         <button class="add-friend-button">Удалить из друзей</button>
