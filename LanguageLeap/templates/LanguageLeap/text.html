@@ -363,7 +363,9 @@ async function get_translation(paragraph_id, word_id){
             });
 
         } else {
-            alert("Ошибка HTTP: " + response.status);
+            response.json().then(data => {
+            alert("Ошибка: " + response.status + "\n" + data.message);
+    });
         }
     } catch (error) {
         console.error("Fetch error: ", error);

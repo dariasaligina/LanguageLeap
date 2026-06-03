@@ -544,19 +544,16 @@
                         });
 
                         async function updateWordStatus(wordId, isCorrect) {
-                // Преобразует true в 1, false в 0
                 const numericIsCorrect = +isCorrect;
                 const apiUrl = `/saved_word_update/${wordId}/${numericIsCorrect}`;
                 try {
-                    const response = await fetch(apiUrl); // Использование const для response
+                    const response = await fetch(apiUrl);
                     if (response.ok) {
-                        const json = await response.json(); // Использование const для json
-                        // Ваша логика с json.saved_word
-                        // Если вы хотите использовать исходное булево значение isCorrect, используйте его здесь
+                        const json = await response.json();
                         if (!isCorrect){
                             reload_neded = true;
                         }
-                        console.log("Успешно обновлено:", json); // Добавьте для отладки
+                        console.log("Успешно обновлено:", json);
                     } else {
                         alert("Ошибка HTTP: " + response.status + " - " + response.statusText);
                         console.error("Ошибка HTTP:", response.status, response.statusText);

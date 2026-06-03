@@ -79,6 +79,7 @@ class TextForm(ModelForm):
         if self.cleaned_data.get("audio"):
             new_text.audio = self.cleaned_data["audio"]
         else:
+            new_text.save()
             new_text.audio = self._generate_audio(new_text.pk, new_text.language.code)
         new_text.save()
         return new_text.pk
@@ -102,16 +103,15 @@ class CatalogFilterForm(forms.Form):
 class ExportForm(forms.Form):
     """Форма для экспорта слов с выбором колонок"""
 
-    # Поля для выбора колонок
     col_date = forms.BooleanField(
         required=False,
         label="Дата добавления",
-        initial=True
+        initial=False
     )
     col_text_name = forms.BooleanField(
         required=False,
         label="Название текста",
-        initial=True
+        initial=False
     )
     col_word = forms.BooleanField(
         required=False,
@@ -126,12 +126,12 @@ class ExportForm(forms.Form):
     col_example = forms.BooleanField(
         required=False,
         label="Пример",
-        initial=False
+        initial=True
     )
     col_example_translation = forms.BooleanField(
         required=False,
         label="Перевод примера",
-        initial=False
+        initial=True
     )
     col_definition = forms.BooleanField(
         required=False,
@@ -232,9 +232,7 @@ class ExportForm(forms.Form):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        # Поля, доступные для редактирования пользователем
         fields = ['bio', 'avatar', 'language']
-        # Опционально: настройка виджетов и подписей
         widgets = {
             'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Расскажите о себе...'}),
             'language': forms.Select(attrs={'class': 'form-control'}),
@@ -247,7 +245,5 @@ class ProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Делаем поле avatar необязательным, чтобы пользователь мог не менять аватар
         self.fields['avatar'].required = False
-        # При необходимости добавить дополнительные атрибуты CSS
         self.fields['bio'].widget.attrs.update({'class': 'form-control'})

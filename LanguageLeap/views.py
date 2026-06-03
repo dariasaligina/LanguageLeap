@@ -25,7 +25,6 @@ def index(request):
     return redirect("leap:login")
 
 
-# Create your views here.
 def catalog(request):
     language_levels = LanguageLevel.objects.all()
     form_values = {"searchField": "",
@@ -113,6 +112,9 @@ class TranslateWord(APIView):
                 word_object.init_by_api(text_id, paragraph, word_number)
             except (IndexError, Text.DoesNotExist):
                 raise Http404()
+            except UnboundLocalError:
+                return JsonResponse({"message": "Не удается получить запрос от внешнего api."},
+                                    reason="External API request failed", status=500)
             word_object.save()
 
         saved_word = SavedWord(word=word_object, user=request.user)

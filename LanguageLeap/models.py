@@ -197,6 +197,7 @@ class Word(models.Model):
             except Exception as e:
                 print(f"attempt {attempt + 1} failed")
                 print(e)
+
         self.word = response.word
         self.translation = response.translation
         self.definition = response.definition
@@ -225,7 +226,7 @@ class SavedWord(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     word = models.ForeignKey(Word, on_delete=models.PROTECT)
     knowledge_degree = models.ForeignKey(KnowledgeDegree, on_delete=models.PROTECT, default=1)
-    next_rep = models.DateTimeField(null=True, default=datetime.now())
+    next_rep = models.DateTimeField(null=True, default=datetime.now)
     creation_date = models.DateField(auto_now_add=True)
     learned_date = models.DateTimeField(null=True)
 
