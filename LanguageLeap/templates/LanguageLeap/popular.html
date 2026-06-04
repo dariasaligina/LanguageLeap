@@ -167,7 +167,6 @@
                 <div class="tab" onclick="showTexts('allTime')">Все время</div>
             </div>
             <div class="text-display-section active" id="weekTexts">
-                <!-- Preloaded text cards for the week -->
                 {% for text in week %}
             <a href = "{%url 'leap:text' text.id%}">
             <div class='text-block'>
@@ -182,10 +181,8 @@
                         </div>
                     </div></div></a>
                     {%endfor%}
-                <!-- Repeat other text blocks similarly -->
             </div>
             <div class="text-display-section" id="monthTexts">
-                <!-- Preloaded text cards for the month -->
                 {% for text in month %}
             <a href = "{%url 'leap:text' text.id%}">
             <div class='text-block'>
@@ -202,7 +199,6 @@
                     {%endfor%}
             </div>
             <div class="text-display-section" id="yearTexts">
-                <!-- Preloaded text cards for the year -->
                 {% for text in year %}
             <a href = "{%url 'leap:text' text.id%}">
             <div class='text-block'>
@@ -219,7 +215,6 @@
                     {%endfor%}
             </div>
             <div class="text-display-section" id="allTimeTexts">
-                <!-- Preloaded text cards for all time -->
                 {% for text in all_time %}
             <a href = "{%url 'leap:text' text.id%}">
             <div class='text-block'>
@@ -238,7 +233,6 @@
         </div>
     </div>
     {% include 'LanguageLeap/footer.html' %}
-
     <script>
         function showTexts(period) {
             const sections = document.querySelectorAll('.text-display-section');

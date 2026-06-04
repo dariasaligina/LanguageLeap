@@ -110,7 +110,7 @@
         }
 
         .save-options button.active {
-            background-color: #28a745; /* Green for active state */
+            background-color: #28a745;
         }
 
         .sidebar {
@@ -256,7 +256,6 @@
                             {%if word.word.antonyms != null%}
                                 <p><strong>Антонимы:</strong> {{word.word.antonyms|join:", "}}</p>
                             {% endif %}
-
                         </div>
                     </li>
                     {%endfor%}
@@ -269,15 +268,11 @@
 
 {% for word in words%}
     tippy('.word-{{word.word.paragraph}}-{{word.word.word_in_paragraph}}', {
-
   content: "{{word.word}} - {{word.word.translation}}",
 });
 {% endfor %}
 </script>
     <script>
-
-
-
         document.addEventListener('DOMContentLoaded', () => {
             // Save options functionality
             const saveButtons = document.querySelectorAll('.save-options button');
@@ -303,28 +298,22 @@
 
 
 async function get_translation(paragraph_id, word_id){
-
     h = document.querySelector("head");
     st = document.createElement("style");
     st.innerHTML = `.word-${paragraph_id}-${word_id}{
         background: rgba(255,255,0,1);
         text-decoration: underline;
         }`;
-
     h.appendChild(st);
     try {
         const response = await fetch(`/translate_word/{{text.id}}/${paragraph_id}/${word_id}`);
         console.log(`/translate_word/{{text.id}}/${paragraph_id}/${word_id}`);
         if (response.ok) {
-
             let json = await response.json();
             console.log(json);
-
             vocabulary = document.getElementsByClassName("vocabulary-list")[0];
             console.log(`.word-${paragraph_id}-${word_id}`, `${json.word} - ${json.translation}`)
-
             tippy(`.word-${paragraph_id}-${word_id}`, { content: `${json.word} - ${json.translation}` });
-
             word = document.createElement("li");
             word.className = "vocabulary-item";
             word.innerHTML = `<li class="vocabulary-item">
@@ -344,22 +333,14 @@ async function get_translation(paragraph_id, word_id){
         }
     </div>
 </li>`;
-
             console.log(word.innerHTML)
-
             vocabulary.appendChild(word);
-
-            // Vocabulary toggle functionality
-
             const vocabularyHeaders = word.querySelectorAll('.vocabulary-header');
             vocabularyHeaders.forEach(header => {
-
                     header.addEventListener('click', function toggle_header() {
                         const item = header.closest('.vocabulary-item');
                         item.classList.toggle('expanded');
-
                     });
-
             });
 
         } else {

@@ -86,10 +86,10 @@
         transform: translateY(-2px);
       }
       .option-button.correct {
-        background-color: #28a745; /* Green */
+        background-color: #28a745;
       }
       .option-button.incorrect {
-        background-color: #dc3545; /* Red */
+        background-color: #dc3545;
       }
       .feedback-container {
         margin-top: 20px;
@@ -97,7 +97,7 @@
         border-radius: 5px;
         font-size: 1.1em;
         text-align: center;
-        display: none; /* Hidden by default */
+        display: none;
       }
       .feedback-container.correct {
         background-color: #d4edda;
@@ -119,7 +119,7 @@
         font-size: 1.1em;
         margin-top: 20px;
         width: 100%;
-        display: none; /* Hidden by default */
+        display: none;
         transition: background-color 0.3s ease;
       }
       .next-button:hover {
@@ -176,7 +176,7 @@
         transition: background-color 0.3s ease;
       }
       .flashcard-content.revealed {
-        background-color: #d4edda; /* Light green for revealed state */
+        background-color: #d4edda;
         cursor: default;
       }
       .flashcard-translation {
@@ -506,7 +506,6 @@
                             enableNextButton();
                         }
 
-                        // Новая функция для обработки ответов на флеш-карточках
                         function handleFlashcardAnswer(wordId, isCorrect, buttonsContainer) {
                             if (isCorrect) {
                                 showFeedback(true, 'Отлично! Продолжайте в том же духе.');
@@ -517,8 +516,8 @@
 
                             }
                             updateWordStatus(wordId, isCorrect);
-                            enableNextButton(); // Активируем кнопку "Следующий вопрос"
-                            disableFlashcardButtons(buttonsContainer); // Отключаем кнопки "Я знал(а)" и "Мне нужно повторить"
+                            enableNextButton();
+                            disableFlashcardButtons(buttonsContainer);
                         }
 
                         function showFeedback(isCorrect, message) {

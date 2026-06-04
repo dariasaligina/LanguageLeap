@@ -26,19 +26,17 @@
         color: #2c3e50;
         margin-bottom: 30px;
     }
-    /* Изменения здесь: */
-    .filters form { /* Стилизируем саму форму внутри .filters */
+    .filters form {
         display: flex;
         flex-wrap: wrap;
-        gap: 20px; /* Отступ между элементами формы */
-        align-items: flex-end; /* Выравнивание элементов по нижнему краю */
+        gap: 20px;
+        align-items: flex-end;
         margin-bottom: 30px;
-        width: 100%; /* Убедимся, что форма занимает всю доступную ширину */
+        width: 100%;
     }
     .filter-group {
-        flex: 1; /* Позволяет группам фильтров занимать доступное пространство */
-        min-width: 200px; /* Минимальная ширина для каждого фильтра */
-        /* margin-bottom: 15px; Удаляем, т.к. gap в .filters form уже дает отступ */
+        flex: 1;
+        min-width: 200px;
     }
     .filter-group label {
         display: block;
@@ -74,24 +72,22 @@
         background-position: right 10px top 50%;
         background-size: 12px;
     }
-    /* Стили для кнопки submit внутри формы */
     .filters form input[type="submit"] {
-        /* Убираем flex-grow для кнопки, чтобы она не растягивалась */
         flex-grow: 0;
         flex-shrink: 0;
-        align-self: flex-end; /* Выравнивает кнопку по нижнему краю в flex-контейнере */
-        background-color: #3498db; /* Основной цвет кнопки */
-        color: #fff; /* Белый текст */
-        padding: 10px 20px; /* Увеличиваем паддинг для лучшего вида */
-        border: none; /* Убираем рамку */
+        align-self: flex-end;
+        background-color: #3498db;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
         border-radius: 5px;
-        font-size: 1em; /* Стандартный размер шрифта */
+        font-size: 1em;
         font-weight: bold;
         cursor: pointer;
-        transition: background-color 0.3s ease; /* Плавный переход для ховера */
+        transition: background-color 0.3s ease;
     }
     .filters form input[type="submit"]:hover {
-        background-color: #2980b9; /* Темнее цвет при наведении */
+        background-color: #2980b9;
     }
     .text-display-section {
         display: grid;
@@ -137,8 +133,6 @@
         align-items: center;
         margin-top: 10px;
     }
-    /* Старые стили для input[type="submit"] удалены, т.к. они были вне формы */
-    /* .input[type="submit"] и .input[type="submit"]:hover теперь применяются через .filters form input[type="submit"] */
     .language-level {
         background-color: #e8f0fe;
         color: #3498db;
@@ -157,9 +151,8 @@
         color: #e74c3c;
         margin-right: 5px;
     }
-    /* Responsive adjustments */
     @media (max-width: 768px) {
-        .filters form { /* Применяем к форме */
+        .filters form {
             flex-direction: column;
             align-items: stretch;
         }
@@ -170,7 +163,6 @@
     a{
     text-decoration: none;
     }
-    /* Стили для пагинации */
 .pagination {
     margin-top: 40px;
     text-align: center;
@@ -215,7 +207,6 @@
     margin: 0 5px;
 }
 
-/* Для мобильных устройств */
 @media (max-width: 768px) {
     .step-links {
         gap: 8px;

@@ -128,14 +128,16 @@
             <div class="stat-section">
                 <h2>Активность пользователя</h2>
                 <div>
-            <button id="prevHeatmap" class="navigation-button"><i class="fas fa-arrow-left-long"></i></button>
-            <button id="nextHeatmap" class="navigation-button"><i class="fas fa-arrow-right-long"></i></button>
-        </div>
-                <div id="heatmap"><div id="cal-heatmap"></div></div> <!-- Здесь будет heatmap -->
+                    <button id="prevHeatmap" class="navigation-button"><i class="fas fa-arrow-left-long"></i></button>
+                    <button id="nextHeatmap" class="navigation-button"><i class="fas fa-arrow-right-long"></i></button>
+                </div>
+                <div id="heatmap">
+                    <div id="cal-heatmap"></div>
+                </div>
             </div>
             <div class="stat-section">
                 <h2>График выученных слов</h2>
-                <canvas id="words-chart"></canvas> <!-- Здесь будет график -->
+                <canvas id="words-chart"></canvas>
             </div>
             <div class="stat-section">
                 <h2>Результаты друзей</h2>
@@ -147,24 +149,13 @@
 {% include 'LanguageLeap/footer.html' %}
 <script>
 
-
-
-
     const cal = new CalHeatmap();
-
-
-
     cal.paint({
-
     date:{locale: 'ru',timezone: 'Europe/Moscow', highlight: [
-
       new Date(), // Highlight today
     ],},
-
     domain: { type: 'month' },
-
     subDomain: { type: 'day',radius: 2},
-
     minDate: new Date(2025, 1),
     maxDate: new Date(2050, 0),
     data: { type:"json",
@@ -172,10 +163,8 @@
             x: d => d.creation_date,
             y: d => d.cards_done+d.saved_words,
             defaultValue: 0,},
-
     scale: {
         color: {
-
           scheme: 'Blues',
           type: 'linear',
           domain: [0, 50],
@@ -193,17 +182,13 @@
       },
     ]]);
 
-
 document.getElementById('prevHeatmap').addEventListener('click', function () {
         cal.previous()
     });
     document.getElementById('nextHeatmap').addEventListener('click', function () {
         cal.next()
     });
-
-
  const ctx = document.getElementById('words-chart');
-
  let chart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -231,7 +216,6 @@ document.getElementById('prevHeatmap').addEventListener('click', function () {
         ],
     },
     options: {
-
         scales: {
             x: {
                 type: 'time',
@@ -250,8 +234,6 @@ document.getElementById('prevHeatmap').addEventListener('click', function () {
         }
     }
 });
-
-
 const grid = new gridjs.Grid({
   columns: [{name:"id", hidden:true},"Имя пользователя","Выученных слов","Сохраненных слов",   "Активность за неделю"],
   data: [
@@ -263,10 +245,6 @@ const grid = new gridjs.Grid({
 
 }).render(document.getElementById("friend_table"));
 grid.on('rowClick', (...args) => window.location.replace("/user_page/"+args[1]._cells[0].data.toString()));
-
-
-
-
 </script>
 </body>
 </html>
